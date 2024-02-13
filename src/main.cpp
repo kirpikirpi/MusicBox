@@ -19,7 +19,7 @@
  * Signal      Pin          Pin           Pin       Pin        Pin              Pin
  * -----------------------------------------------------------------------------------------
  * RST/Reset   RST          9             5         D9         RESET/ICSP-5     RST          D3-GPIO 0
- * SPI SS 1    SDA(SS)      ** custom, take a unused pin, only HIGH/LOW required **          D8-GPIO 15
+ * SPI SS 1    SDA(SS)      ** custom, take a unused pin, only HIGH/LOW required **          D1-GPIO 5
  * SPI SS 2    SDA(SS)      ** custom, take a unused pin, only HIGH/LOW required **
  * SPI MOSI    MOSI         11 / ICSP-4   51        D11        ICSP-4           16           D7-GPIO 13
  * SPI MISO    MISO         12 / ICSP-1   50        D12        ICSP-1           14           D6-GPIO 12
@@ -47,51 +47,32 @@ int cs = 4;
 */
 
 // RFID PINS
-#define RST_PIN 3 // Configurable, see typical pin layout above
-#define SS_1_PIN 10
-#define NR_OF_READERS 1
+#define RST_PIN 0 // Configurable, see typical pin layout above
+#define SS_PIN 5
 
-MFRC522 mfrc522; // Create MFRC522 instance.
+MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
 
-void setup()
-{
-
-    Serial.begin(115200);
-    SPI.begin(); // Init SPI bus
-
-    // RFID setup
-    mfrc522.PCD_Init(SS_1_PIN, RST_PIN); // Init MFRC522 card
-    mfrc522.PCD_DumpVersionToSerial();
+void setup() {
+	Serial.begin(115200);		// Initialize serial communications with the PC
+	while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
+	SPI.begin();			// Init SPI bus
+	mfrc522.PCD_Init();		// Init MFRC522
+	delay(4);				// Optional delay. Some board do need more time after init to be ready, see Readme
+	mfrc522.PCD_DumpVersionToSerial();	// Show details of PCD - MFRC522 Card Reader details
+	Serial.println(F("Scan PICC to see UID, SAK, type, and data blocks..."));
 }
 
-void loop()
-{
+void loop() {
+	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+	if ( ! mfrc522.PICC_IsNewCardPresent()) {
+		return;
+	}
 
-    // Look for new cards
-    if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial())
-    {
-        // Show some details of the PICC (that is: the tag/card)
-        Serial.print(F(": Card UID:"));
-        dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
-        Serial.println();
-        Serial.print(F("PICC type: "));
-        MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
-        Serial.println(mfrc522.PICC_GetTypeName(piccType));
-        // Halt PICC
-        mfrc522.PICC_HaltA();
-        // Stop encryption on PCD
-        mfrc522.PCD_StopCrypto1();
-    } 
-}
+	// Select one of the cards
+	if ( ! mfrc522.PICC_ReadCardSerial()) {
+		return;
+	}
 
-/**
- * Helper routine to dump a byte array as hex values to Serial.
- */
-void dump_byte_array(byte *buffer, byte bufferSize)
-{
-    for (byte i = 0; i < bufferSize; i++)
-    {
-        Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-        Serial.print(buffer[i], HEX);
-    }
+	// Dump debug info about the card; PICC_HaltA() is automatically called
+	mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
 }
