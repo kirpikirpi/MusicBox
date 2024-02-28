@@ -33,46 +33,95 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
-/*
 #include "AudioFileSourceSD.h"
 #include "AudioGeneratorWAV.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
 
-//Sound Setup with I2s and audio CS PIN
+// Sound Setup with I2s and audio CS PIN
 AudioGeneratorWAV *wav;
 AudioFileSourceSD *file;
 AudioOutputI2S *out;
-int cs = 4;
-*/
+int cs = 5;
+
+// D3 - DIN, BCRL - D8, LRC - D4
+// D3 = GPIO 0, D8 = GPIO 15, D4 = GIPO 2
+// SD CS D1, GIPO 5
 
 // RFID PINS
-#define RST_PIN 0 // Configurable, see typical pin layout above
-#define SS_PIN 5
+#define RST_PIN 4 // Configurable, see typical pin layout above
+#define SS_PIN 16
 
-MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
+MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
+const char *songs[5] = {"auf_der_mauer.wav", "bibabutzemann.wav", "tante_marokko.wav", "vogelhochzeit.wav", "annekaffekanne.wav"};
+int iteration = 0;
+bool notIncremented = true;
+bool isFirstIteration = true;
 
-void setup() {
-	Serial.begin(115200);		// Initialize serial communications with the PC
-	while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
-	SPI.begin();			// Init SPI bus
-	mfrc522.PCD_Init();		// Init MFRC522
-	delay(4);				// Optional delay. Some board do need more time after init to be ready, see Readme
-	mfrc522.PCD_DumpVersionToSerial();	// Show details of PCD - MFRC522 Card Reader details
-	Serial.println(F("Scan PICC to see UID, SAK, type, and data blocks..."));
+void setup()
+{
+
+	Serial.begin(115200); // Initialize serial communications with the PC
+	while (!Serial)
+		;							   // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
+	SPI.begin();					   // Init SPI bus
+	mfrc522.PCD_Init();				   // Init MFRC522
+	delay(4);						   // Optional delay. Some board do need more time after init to be ready, see Readme
+	mfrc522.PCD_DumpVersionToSerial(); // Show details of PCD - MFRC522 Card Reader details
+
+	Serial.print("Initializing SD card...");
+
+	if (!SD.begin(cs))
+	{
+		Serial.println("initialization failed!");
+		return;
+	}
+	Serial.println("initialization done.");
+
+	audioLogger = &Serial;
+	out = new AudioOutputI2S();
+	wav = new AudioGeneratorWAV();
+	out->SetGain(0.1f);
 }
 
-void loop() {
+void loop()
+{
+
+	if (wav->isRunning())
+	{
+		if (!wav->loop())
+			wav->stop();
+		notIncremented = true;
+		return;
+	}
+	else if (!wav->isRunning() && notIncremented && !isFirstIteration)
+	{
+		Serial.printf("WAV done\n");
+		iteration += 1;
+		int getArrayLength = sizeof(songs) / sizeof(int);
+		iteration = iteration % getArrayLength;
+		notIncremented = false;
+		delay(1000);
+	}
+
 	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-	if ( ! mfrc522.PICC_IsNewCardPresent()) {
+	if (!mfrc522.PICC_IsNewCardPresent())
+	{
 		return;
 	}
+	else
+	{
+		Serial.printf("WAV start\n");
+		file = new AudioFileSourceSD(songs[iteration]);
+		wav->begin(file, out);
+		isFirstIteration = false;
+		// Select one of the cards
+		if (!mfrc522.PICC_ReadCardSerial())
+		{
+			return;
+		}
 
-	// Select one of the cards
-	if ( ! mfrc522.PICC_ReadCardSerial()) {
-		return;
+		// Dump debug info about the card; PICC_HaltA() is automatically called
+		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
 	}
-
-	// Dump debug info about the card; PICC_HaltA() is automatically called
-	mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
 }
