@@ -53,7 +53,7 @@ int cs = 5;
 #define SS_PIN 16
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
-const char *songs[5] = {"auf_der_mauer.wav", "bibabutzemann.wav", "tante_marokko.wav", "vogelhochzeit.wav", "annekaffekanne.wav"};
+const char *songs[5] = {"bibabutzemann.wav", "auf_der_mauer.wav", "tante_marokko.wav", "vogelhochzeit.wav", "annekaffekanne.wav"};
 int iteration = 0;
 bool notIncremented = true;
 bool isFirstIteration = true;
@@ -82,6 +82,21 @@ void setup()
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
 	out->SetGain(0.1f);
+	randomSeed(analogRead(0));
+}
+int randomNextSongIndex()
+{
+	int max = sizeof(songs) / sizeof(int);
+	long randomNum = random(0, max);
+	return (int)randomNum;
+}
+
+int subsequentIndex()
+{
+	int num = iteration + 1;
+	int getArrayLength = sizeof(songs) / sizeof(int);
+	num = num % getArrayLength;
+	return num;
 }
 
 void loop()
@@ -97,9 +112,8 @@ void loop()
 	else if (!wav->isRunning() && notIncremented && !isFirstIteration)
 	{
 		Serial.printf("WAV done\n");
-		iteration += 1;
-		int getArrayLength = sizeof(songs) / sizeof(int);
-		iteration = iteration % getArrayLength;
+		iteration = randomNextSongIndex();
+		Serial.println("index: " + iteration);
 		notIncremented = false;
 		delay(1000);
 	}
@@ -112,6 +126,8 @@ void loop()
 	else
 	{
 		Serial.printf("WAV start\n");
+		iteration = randomNextSongIndex();
+		Serial.println("index: " + iteration);
 		file = new AudioFileSourceSD(songs[iteration]);
 		wav->begin(file, out);
 		isFirstIteration = false;
