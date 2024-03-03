@@ -51,6 +51,11 @@ int cs = 5;
 // RFID PINS
 #define RST_PIN 4 // Configurable, see typical pin layout above
 #define SS_PIN 16
+unsigned long plannedNextScan; // used for timed PICC scanning
+float timeToNextScan = 1000;   // time in milliseconds
+byte *currentUID;
+byte *currentUIDlength;
+
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 const char *songs[5] = {"bibabutzemann.wav", "auf_der_mauer.wav", "tante_marokko.wav", "vogelhochzeit.wav", "annekaffekanne.wav"};
@@ -81,7 +86,7 @@ void setup()
 	audioLogger = &Serial;
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
-	out->SetGain(0.1f);
+	out->SetGain(0.4f);
 	randomSeed(analogRead(0));
 }
 int randomNextSongIndex()
@@ -99,6 +104,38 @@ int subsequentIndex()
 	return num;
 }
 
+void changeSong()
+{
+	Serial.printf("WAV start\n");
+	iteration = randomNextSongIndex();
+	Serial.println("index: " + iteration);
+	file = new AudioFileSourceSD(songs[iteration]);
+	wav->begin(file, out);
+	isFirstIteration = false;
+}
+
+void scanForCardAndChangeSong()
+{
+	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
+	if (!mfrc522.PICC_IsNewCardPresent())
+	{
+		return;
+	}
+	else
+	{
+		// Select one of the cards
+		if (!mfrc522.PICC_ReadCardSerial())
+		{
+			return;
+		}
+
+		// Dump debug info about the card; PICC_HaltA() is automatically called
+		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
+		
+		changeSong();
+	}
+}
+
 void loop()
 {
 
@@ -107,6 +144,12 @@ void loop()
 		if (!wav->loop())
 			wav->stop();
 		notIncremented = true;
+		unsigned long millisSinceStart = millis();
+		if (millisSinceStart > plannedNextScan)
+		{
+			scanForCardAndChangeSong();
+			plannedNextScan = millisSinceStart + timeToNextScan;
+		}
 		return;
 	}
 	else if (!wav->isRunning() && notIncremented && !isFirstIteration)
@@ -117,27 +160,5 @@ void loop()
 		notIncremented = false;
 		delay(1000);
 	}
-
-	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-	if (!mfrc522.PICC_IsNewCardPresent())
-	{
-		return;
-	}
-	else
-	{
-		Serial.printf("WAV start\n");
-		iteration = randomNextSongIndex();
-		Serial.println("index: " + iteration);
-		file = new AudioFileSourceSD(songs[iteration]);
-		wav->begin(file, out);
-		isFirstIteration = false;
-		// Select one of the cards
-		if (!mfrc522.PICC_ReadCardSerial())
-		{
-			return;
-		}
-
-		// Dump debug info about the card; PICC_HaltA() is automatically called
-		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-	}
+	scanForCardAndChangeSong();
 }
