@@ -32,14 +32,17 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <MFRC522.h>
+#include <Regexp.h>
 
 #include "AudioFileSourceSD.h"
 #include "AudioGeneratorWAV.h"
+#include "AudioGeneratorMP3a.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
 
 // Sound Setup with I2s and audio CS PIN
 AudioGeneratorWAV *wav;
+AudioGeneratorMP3a *mp3;
 AudioFileSourceSD *file;
 AudioOutputI2S *out;
 int cs = 5;
@@ -56,12 +59,21 @@ float timeToNextScan = 1000;   // time in milliseconds
 byte *currentUID;
 byte *currentUIDlength;
 
-
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
-const char *songs[5] = {"bibabutzemann.wav", "auf_der_mauer.wav", "tante_marokko.wav", "vogelhochzeit.wav", "annekaffekanne.wav"};
+const char *songs_0_WAV[] = {"bibabutzemann.wav", "auf_der_mauer.wav", "tante_marokko.wav", "vogelhochzeit.wav", "annekaffekanne.wav", NULL};
+const char *songs_1_MP3[] = {"dontgo.mp3", "pinguin.mp3", "dumbbell.mp3", "mrbluesky.mp3", "crabrave.mp3",
+							 "good4you.mp3", "bohemian.mp3", "moorhexe.mp3", "hedwig.mp3", "moveitmoveit.mp3",
+							 "faint.mp3", "wannabela.mp3", "omnissiah.mp3", "vampire.mp3", "dracula.mp3",
+							 "fourseasons.mp3", NULL};
 int iteration = 0;
 bool notIncremented = true;
 bool isFirstIteration = true;
+
+// regex
+MatchState ms;
+char isWav;
+char isMP3;
+char target[100];
 
 void setup()
 {
@@ -86,31 +98,58 @@ void setup()
 	audioLogger = &Serial;
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
-	out->SetGain(0.4f);
+	mp3 = new AudioGeneratorMP3a();
+	out->SetGain(0.3f);
 	randomSeed(analogRead(0));
+
 }
-int randomNextSongIndex()
+
+size_t getArraySize(const char *array[])
 {
-	int max = sizeof(songs) / sizeof(int);
-	long randomNum = random(0, max);
+	size_t size = 0;
+	while (array[size] != NULL)
+	{
+		size++;
+	}
+	return size;
+}
+
+int randomNextSongIndex(const char *songarray[])
+{
+	size_t size = getArraySize(songarray);
+	long randomNum = random(0, size);
 	return (int)randomNum;
 }
 
-int subsequentIndex()
+int subsequentIndex(const char *songarray[])
 {
 	int num = iteration + 1;
-	int getArrayLength = sizeof(songs) / sizeof(int);
+	int getArrayLength = getArraySize(songarray);
 	num = num % getArrayLength;
 	return num;
 }
 
-void changeSong()
+void changeSong(const char *songarray[])
 {
-	Serial.printf("WAV start\n");
-	iteration = randomNextSongIndex();
+	iteration = randomNextSongIndex(songarray);
 	Serial.println("index: " + iteration);
-	file = new AudioFileSourceSD(songs[iteration]);
-	wav->begin(file, out);
+	const char *filename = songarray[iteration];
+	file = new AudioFileSourceSD(filename);
+
+	strcpy(target, filename);
+	ms.Target(target); // set its address
+	isWav = ms.Match(".wav");
+	isMP3 = ms.Match(".mp3");
+	if (isWav > 0){
+		Serial.printf("start wav\n");
+		wav->begin(file, out); // regex found the .wav
+	}
+	else if (isMP3 > 0){
+		Serial.printf("start mp3\n");
+		mp3->begin(file, out); // regex found the .mp3
+	}
+	else
+		Serial.printf("invalid filetype!");
 	isFirstIteration = false;
 }
 
@@ -131,18 +170,18 @@ void scanForCardAndChangeSong()
 
 		// Dump debug info about the card; PICC_HaltA() is automatically called
 		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-		
-		changeSong();
+
+		changeSong(songs_1_MP3);
 	}
 }
 
 void loop()
 {
+	//return;
 
-	if (wav->isRunning())
+	if (mp3->isRunning())
 	{
-		if (!wav->loop())
-			wav->stop();
+		if (!mp3->loop()) mp3->stop();
 		notIncremented = true;
 		unsigned long millisSinceStart = millis();
 		if (millisSinceStart > plannedNextScan)
@@ -152,10 +191,10 @@ void loop()
 		}
 		return;
 	}
-	else if (!wav->isRunning() && notIncremented && !isFirstIteration)
+	else if (!mp3->isRunning() && notIncremented && !isFirstIteration)
 	{
 		Serial.printf("WAV done\n");
-		iteration = randomNextSongIndex();
+		iteration = randomNextSongIndex(songs_1_MP3);
 		Serial.println("index: " + iteration);
 		notIncremented = false;
 		delay(1000);
