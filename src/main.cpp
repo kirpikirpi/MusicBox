@@ -38,14 +38,15 @@
 #include "AudioGeneratorMP3.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
-// #include "AudioFileSourceBuffer.h"
+#include "AudioFileSourceBuffer.h"
+#include <List.hpp>
 
 // Sound Setup with I2s and audio CS PIN
 AudioGeneratorMP3 *mp3;
 AudioFileSourceSD *file;
 AudioOutputI2S *out;
 int cs = 5;
-// AudioFileSourceBuffer *buff;
+AudioFileSourceBuffer *buff;
 
 // D3 - DIN, BCRL - D8, LRC - D4
 // D3 = GPIO 0, D8 = GPIO 15, D4 = GIPO 2
@@ -69,6 +70,7 @@ const char *songs_1_MP3[] = {"dontgo.mp3", "pinguin.mp3", "dumbbell.mp3", "mrblu
 							 "everybodyhides.mp3", "help.mp3", "honky.mp3", "hound.mp3", "hound.mp3", "igetaround.mp3",
 							 "isawher.mp3", "jailhouse.mp3", "killerqueen.mp3", "bottom2.mp3", NULL};
 int iteration = 0;
+List<int> songsPlayed;
 bool notIncremented = true;
 bool isFirstIteration = true;
 
@@ -93,7 +95,7 @@ void setup()
 	audioLogger = &Serial;
 	out = new AudioOutputI2S();
 	mp3 = new AudioGeneratorMP3();
-	// buff = new AudioFileSourceBuffer(file, 2048);
+	buff = new AudioFileSourceBuffer(file, 2048);
 	out->SetGain(0.025f);
 	randomSeed(analogRead(0));
 }
@@ -112,6 +114,38 @@ int randomNextSongIndex(const char *songarray[])
 {
 	size_t size = getArraySize(songarray);
 	long randomNum = random(0, size);
+	return (int)randomNum;
+}
+
+int randomNextSongIndex(const char *songarray[], List<int> usedIndexes)
+{
+	size_t size = getArraySize(songarray);
+	if ((int)size > usedIndexes.getSize())
+		usedIndexes.clear();
+	long randomNum = random(0, size);
+	bool searchNewIndex = true;
+
+	if (usedIndexes.isEmpty())
+	{
+		Serial.println("list is empty!!");
+		return randomNum;
+	}
+
+	while (searchNewIndex)
+	{
+		for (int j = 0; j < usedIndexes.getSize(); j++)
+		{
+			int potentiallyUsed = usedIndexes.get(j);
+			if (randomNum == potentiallyUsed)
+			{
+				randomNum = random(0, size);
+				searchNewIndex = true;
+				break;
+			}
+			searchNewIndex = false;
+		}
+	}
+
 	return (int)randomNum;
 }
 
@@ -136,8 +170,8 @@ void startPlayback(const char *filename)
 	if (mp3->isRunning())
 		mp3->stop();
 	file = new AudioFileSourceSD(filename);
-	// buff = new AudioFileSourceBuffer(file, 2048);
-	mp3->begin(file, out); // regex found the .mp3
+	buff = new AudioFileSourceBuffer(file, 2048);
+	mp3->begin(buff, out);
 }
 
 bool scanForCard()
@@ -178,9 +212,10 @@ void loop()
 			if (isNewCard)
 			{
 				// new index, new file, load into audio engine
-				iteration = randomNextSongIndex(songs_1_MP3);
+				iteration = randomNextSongIndex(songs_1_MP3,songsPlayed);
 				const char *filename = changeSong(songs_1_MP3, iteration);
 				startPlayback(filename);
+				songsPlayed.add(iteration);
 			}
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
@@ -189,15 +224,16 @@ void loop()
 	else if (!mp3->isRunning() && notIncremented && !isFirstIteration)
 	{
 		Serial.printf("done\n");
-		iteration = randomNextSongIndex(songs_1_MP3);
+		iteration = randomNextSongIndex(songs_1_MP3, songsPlayed);
 		notIncremented = false;
 		delay(1000);
 	}
 	bool isNewCard = scanForCard();
 	if (isNewCard)
 	{
-		iteration = randomNextSongIndex(songs_1_MP3);
+		iteration = randomNextSongIndex(songs_1_MP3, songsPlayed);
 		const char *filename = changeSong(songs_1_MP3, iteration);
 		startPlayback(filename);
+		songsPlayed.add(iteration);
 	}
 }
