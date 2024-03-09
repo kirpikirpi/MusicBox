@@ -39,7 +39,7 @@
 #include "AudioGeneratorMP3.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
-//#include "AudioFileSourceBuffer.h"
+// #include "AudioFileSourceBuffer.h"
 
 // Sound Setup with I2s and audio CS PIN
 AudioGeneratorWAV *wav;
@@ -47,7 +47,7 @@ AudioGeneratorMP3 *mp3;
 AudioFileSourceSD *file;
 AudioOutputI2S *out;
 int cs = 5;
-//AudioFileSourceBuffer *buff;
+// AudioFileSourceBuffer *buff;
 
 // D3 - DIN, BCRL - D8, LRC - D4
 // D3 = GPIO 0, D8 = GPIO 15, D4 = GIPO 2
@@ -80,7 +80,7 @@ char target[100];
 void setup()
 {
 
-	Serial.begin(115200); // Initialize serial communications with the PC
+	Serial.begin(115200);			   // Initialize serial communications with the PC
 	SPI.begin();					   // Init SPI bus
 	mfrc522.PCD_Init();				   // Init MFRC522
 	delay(4);						   // Optional delay. Some board do need more time after init to be ready, see Readme
@@ -99,7 +99,7 @@ void setup()
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
 	mp3 = new AudioGeneratorMP3();
-	//buff = new AudioFileSourceBuffer(file, 2048);
+	// buff = new AudioFileSourceBuffer(file, 2048);
 	out->SetGain(0.025f);
 	randomSeed(analogRead(0));
 }
@@ -142,14 +142,14 @@ void changeSong(const char *songarray[], int index)
 	{
 		Serial.printf("start wav\n");
 		file = new AudioFileSourceSD(filename);
-		//buff = new AudioFileSourceBuffer(file, 2048);
+		// buff = new AudioFileSourceBuffer(file, 2048);
 		wav->begin(file, out); // regex found the .wav
 	}
 	else if (isMP3 > 0)
 	{
 		Serial.printf("start mp3\n");
 		file = new AudioFileSourceSD(filename);
-		//buff = new AudioFileSourceBuffer(file, 2048);
+		// buff = new AudioFileSourceBuffer(file, 2048);
 		mp3->begin(file, out); // regex found the .mp3
 	}
 	else
@@ -157,12 +157,12 @@ void changeSong(const char *songarray[], int index)
 	isFirstIteration = false;
 }
 
-void scanForCardAndChangeSong()
+bool scanForCard()
 {
 	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
 	if (!mfrc522.PICC_IsNewCardPresent())
 	{
-		return;
+		return false;
 	}
 	else
 	{
@@ -170,14 +170,13 @@ void scanForCardAndChangeSong()
 		// Select one of the cards
 		if (!mfrc522.PICC_ReadCardSerial())
 		{
-			return;
+			return false;
 		}
 
 		// Dump debug info about the card; PICC_HaltA() is automatically called
 		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-		iteration = randomNextSongIndex(songs_1_MP3);
-		changeSong(songs_1_MP3, iteration);
 	}
+	return true;
 }
 
 void loop()
@@ -192,8 +191,12 @@ void loop()
 		unsigned long millisSinceStart = millis();
 		if (millisSinceStart > plannedNextScan)
 		{
-			scanForCardAndChangeSong();
-			Serial.printf("scanned for card\n");
+			bool isNewCard = scanForCard();
+			if (isNewCard)
+			{
+				iteration = randomNextSongIndex(songs_1_MP3);
+				changeSong(songs_1_MP3, iteration);
+			}
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
 		return;
@@ -205,5 +208,10 @@ void loop()
 		notIncremented = false;
 		delay(1000);
 	}
-	scanForCardAndChangeSong();
+	bool isNewCard = scanForCard();
+	if (isNewCard)
+	{
+		iteration = randomNextSongIndex(songs_1_MP3);
+		changeSong(songs_1_MP3, iteration);
+	}
 }
