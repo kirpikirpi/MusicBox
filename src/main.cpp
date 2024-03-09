@@ -39,6 +39,7 @@
 #include "AudioGeneratorMP3.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
+//#include "AudioFileSourceBuffer.h"
 
 // Sound Setup with I2s and audio CS PIN
 AudioGeneratorWAV *wav;
@@ -46,6 +47,7 @@ AudioGeneratorMP3 *mp3;
 AudioFileSourceSD *file;
 AudioOutputI2S *out;
 int cs = 5;
+//AudioFileSourceBuffer *buff;
 
 // D3 - DIN, BCRL - D8, LRC - D4
 // D3 = GPIO 0, D8 = GPIO 15, D4 = GIPO 2
@@ -58,13 +60,13 @@ unsigned long plannedNextScan; // used for timed PICC scanning
 float timeToNextScan = 1000;   // time in milliseconds
 byte *currentUID;
 byte *currentUIDlength;
+const String testUID = "04 D1 32 01 17 48 03";
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 const char *songs_0_WAV[] = {"bibabutzemann.wav", "auf_der_mauer.wav", "tante_marokko.wav", "vogelhochzeit.wav", "annekaffekanne.wav", NULL};
 const char *songs_1_MP3[] = {"dontgo.mp3", "pinguin.mp3", "dumbbell.mp3", "mrbluesky.mp3", "crabrave.mp3",
 							 "good4you.mp3", "bohemian.mp3", "moorhexe.mp3", "hedwig.mp3", "moveitmoveit.mp3",
-							 "faint.mp3", "wannabela.mp3", "omnissiah.mp3", "vampire.mp3", "dracula.mp3",
-							 NULL};
+							 "faint.mp3", "wannabela.mp3", "omnissiah.mp3", "vampire.mp3", NULL};
 int iteration = 0;
 bool notIncremented = true;
 bool isFirstIteration = true;
@@ -79,8 +81,6 @@ void setup()
 {
 
 	Serial.begin(115200); // Initialize serial communications with the PC
-	while (!Serial)
-		;							   // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
 	SPI.begin();					   // Init SPI bus
 	mfrc522.PCD_Init();				   // Init MFRC522
 	delay(4);						   // Optional delay. Some board do need more time after init to be ready, see Readme
@@ -97,9 +97,10 @@ void setup()
 
 	audioLogger = &Serial;
 	out = new AudioOutputI2S();
-	// wav = new AudioGeneratorWAV();
+	wav = new AudioGeneratorWAV();
 	mp3 = new AudioGeneratorMP3();
-	out->SetGain(0.1f);
+	//buff = new AudioFileSourceBuffer(file, 2048);
+	out->SetGain(0.025f);
 	randomSeed(analogRead(0));
 }
 
@@ -117,7 +118,6 @@ int randomNextSongIndex(const char *songarray[])
 {
 	size_t size = getArraySize(songarray);
 	long randomNum = random(0, size);
-	Serial.println("index: " + randomNum);
 	return (int)randomNum;
 }
 
@@ -127,25 +127,6 @@ int subsequentIndex(const char *songarray[])
 	int getArrayLength = getArraySize(songarray);
 	num = num % getArrayLength;
 	return num;
-}
-
-bool isFileMP3(const char *filename)
-{
-	strcpy(target, filename);
-	ms.Target(target); // set its address
-	isWav = ms.Match(".wav");
-	isMP3 = ms.Match(".mp3");
-	if (isWav > 0)
-	{
-		return false;
-	}
-	else if (isMP3 > 0)
-	{
-		return true;
-	}
-	else
-		Serial.printf("invalid filetype!");
-	return false;
 }
 
 void changeSong(const char *songarray[], int index)
@@ -161,12 +142,14 @@ void changeSong(const char *songarray[], int index)
 	{
 		Serial.printf("start wav\n");
 		file = new AudioFileSourceSD(filename);
+		//buff = new AudioFileSourceBuffer(file, 2048);
 		wav->begin(file, out); // regex found the .wav
 	}
 	else if (isMP3 > 0)
 	{
 		Serial.printf("start mp3\n");
 		file = new AudioFileSourceSD(filename);
+		//buff = new AudioFileSourceBuffer(file, 2048);
 		mp3->begin(file, out); // regex found the .mp3
 	}
 	else
@@ -183,6 +166,7 @@ void scanForCardAndChangeSong()
 	}
 	else
 	{
+
 		// Select one of the cards
 		if (!mfrc522.PICC_ReadCardSerial())
 		{
@@ -191,8 +175,7 @@ void scanForCardAndChangeSong()
 
 		// Dump debug info about the card; PICC_HaltA() is automatically called
 		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-
-		iteration = subsequentIndex(songs_1_MP3);
+		iteration = randomNextSongIndex(songs_1_MP3);
 		changeSong(songs_1_MP3, iteration);
 	}
 }
@@ -209,9 +192,7 @@ void loop()
 		unsigned long millisSinceStart = millis();
 		if (millisSinceStart > plannedNextScan)
 		{
-			mp3->loop();
 			scanForCardAndChangeSong();
-			mp3->loop();
 			Serial.printf("scanned for card\n");
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
@@ -220,7 +201,7 @@ void loop()
 	else if (!mp3->isRunning() && notIncremented && !isFirstIteration)
 	{
 		Serial.printf("done\n");
-		iteration = subsequentIndex(songs_1_MP3);
+		iteration = randomNextSongIndex(songs_1_MP3);
 		notIncremented = false;
 		delay(1000);
 	}
