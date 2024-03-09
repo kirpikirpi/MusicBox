@@ -120,8 +120,7 @@ int randomNextSongIndex(const char *songarray[])
 int randomNextSongIndex(const char *songarray[], List<int> usedIndexes)
 {
 	size_t size = getArraySize(songarray);
-	if ((int)size > usedIndexes.getSize())
-		usedIndexes.clear();
+	
 	long randomNum = random(0, size);
 	bool searchNewIndex = true;
 
@@ -146,6 +145,7 @@ int randomNextSongIndex(const char *songarray[], List<int> usedIndexes)
 		}
 	}
 
+	Serial.println("number found: " + randomNum);
 	return (int)randomNum;
 }
 
@@ -212,7 +212,8 @@ void loop()
 			if (isNewCard)
 			{
 				// new index, new file, load into audio engine
-				iteration = randomNextSongIndex(songs_1_MP3,songsPlayed);
+				iteration = randomNextSongIndex(songs_1_MP3, songsPlayed);
+				songsPlayed.add(iteration);
 				const char *filename = changeSong(songs_1_MP3, iteration);
 				startPlayback(filename);
 				songsPlayed.add(iteration);
@@ -225,6 +226,7 @@ void loop()
 	{
 		Serial.printf("done\n");
 		iteration = randomNextSongIndex(songs_1_MP3, songsPlayed);
+		songsPlayed.add(iteration);
 		notIncremented = false;
 		delay(1000);
 	}
