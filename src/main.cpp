@@ -35,14 +35,12 @@
 #include <Regexp.h>
 
 #include "AudioFileSourceSD.h"
-#include "AudioGeneratorWAV.h"
 #include "AudioGeneratorMP3.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
 // #include "AudioFileSourceBuffer.h"
 
 // Sound Setup with I2s and audio CS PIN
-AudioGeneratorWAV *wav;
 AudioGeneratorMP3 *mp3;
 AudioFileSourceSD *file;
 AudioOutputI2S *out;
@@ -63,19 +61,13 @@ byte *currentUIDlength;
 const String testUID = "04 D1 32 01 17 48 03";
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
-const char *songs_0_WAV[] = {"bibabutzemann.wav", "auf_der_mauer.wav", "tante_marokko.wav", "vogelhochzeit.wav", "annekaffekanne.wav", NULL};
+
 const char *songs_1_MP3[] = {"dontgo.mp3", "pinguin.mp3", "dumbbell.mp3", "mrbluesky.mp3", "crabrave.mp3",
 							 "good4you.mp3", "bohemian.mp3", "moorhexe.mp3", "hedwig.mp3", "moveitmoveit.mp3",
 							 "faint.mp3", "wannabela.mp3", "omnissiah.mp3", "vampire.mp3", NULL};
 int iteration = 0;
 bool notIncremented = true;
 bool isFirstIteration = true;
-
-// regex
-MatchState ms;
-char isWav;
-char isMP3;
-char target[100];
 
 void setup()
 {
@@ -97,7 +89,6 @@ void setup()
 
 	audioLogger = &Serial;
 	out = new AudioOutputI2S();
-	wav = new AudioGeneratorWAV();
 	mp3 = new AudioGeneratorMP3();
 	// buff = new AudioFileSourceBuffer(file, 2048);
 	out->SetGain(0.025f);
@@ -129,32 +120,21 @@ int subsequentIndex(const char *songarray[])
 	return num;
 }
 
-void changeSong(const char *songarray[], int index)
+const char *changeSong(const char *songarray[], int index)
 {
 	Serial.println("index: " + index);
 	const char *filename = songarray[index];
-
-	strcpy(target, filename);
-	ms.Target(target); // set its address
-	isWav = ms.Match(".wav");
-	isMP3 = ms.Match(".mp3");
-	if (isWav > 0)
-	{
-		Serial.printf("start wav\n");
-		file = new AudioFileSourceSD(filename);
-		// buff = new AudioFileSourceBuffer(file, 2048);
-		wav->begin(file, out); // regex found the .wav
-	}
-	else if (isMP3 > 0)
-	{
-		Serial.printf("start mp3\n");
-		file = new AudioFileSourceSD(filename);
-		// buff = new AudioFileSourceBuffer(file, 2048);
-		mp3->begin(file, out); // regex found the .mp3
-	}
-	else
-		Serial.printf("invalid filetype!");
 	isFirstIteration = false;
+	return filename;
+}
+
+void startPlayback(const char *filename)
+{
+	if (mp3->isRunning())
+		mp3->stop();
+	file = new AudioFileSourceSD(filename);
+	// buff = new AudioFileSourceBuffer(file, 2048);
+	mp3->begin(file, out); // regex found the .mp3
 }
 
 bool scanForCard()
@@ -194,8 +174,10 @@ void loop()
 			bool isNewCard = scanForCard();
 			if (isNewCard)
 			{
+				// new index, new file, load into audio engine
 				iteration = randomNextSongIndex(songs_1_MP3);
-				changeSong(songs_1_MP3, iteration);
+				const char *filename = changeSong(songs_1_MP3, iteration);
+				startPlayback(filename);
 			}
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
@@ -212,6 +194,7 @@ void loop()
 	if (isNewCard)
 	{
 		iteration = randomNextSongIndex(songs_1_MP3);
-		changeSong(songs_1_MP3, iteration);
+		const char *filename = changeSong(songs_1_MP3, iteration);
+		startPlayback(filename);
 	}
 }
