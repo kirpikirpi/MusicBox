@@ -57,8 +57,7 @@ AudioFileSourceBuffer *buff;
 #define SS_PIN 16
 unsigned long plannedNextScan; // used for timed PICC scanning
 float timeToNextScan = 1000;   // time in milliseconds
-byte *currentUID;
-byte *currentUIDlength;
+int currentSongUIDsum = 0;
 
 int cardHorse = 362;
 const char *horseSong = "annekaffekanne.wav";
@@ -178,7 +177,7 @@ void startPlayback(const char *filename)
 
 int scanForCard()
 {
-	int uidSum = 0;
+	int uidSum = -1;
 	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
 	if (!mfrc522.PICC_IsNewCardPresent())
 	{
@@ -211,22 +210,25 @@ void loop()
 		if (millisSinceStart > plannedNextScan)
 		{
 			int isNewCard = scanForCard();
-			if (isNewCard == cardHorse)
+			if (isNewCard == cardHorse && isNewCard != currentSongUIDsum)
 			{
 				startPlayback(horseSong);
+				currentSongUIDsum = isNewCard;
 			}
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
 		return;
 	}
-	else if (!wav->isRunning() && notIncremented && !isFirstIteration)
+	else if (!wav->isRunning() && !isFirstIteration)
 	{
 		Serial.printf("done\n");
+		currentSongUIDsum = 0;
 		delay(1000);
 	}
 	int isNewCard = scanForCard();
 	if (isNewCard == cardHorse)
 	{
 		startPlayback(horseSong);
+		currentSongUIDsum = isNewCard;
 	}
 }
