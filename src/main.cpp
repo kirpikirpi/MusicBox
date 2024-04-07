@@ -35,14 +35,14 @@
 #include <Regexp.h>
 
 #include "AudioFileSourceSD.h"
-#include "AudioGeneratorMP3.h"
+#include "AudioGeneratorWAV.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
 #include "AudioFileSourceBuffer.h"
 #include <List.hpp>
 
 // Sound Setup with I2s and audio CS PIN
-AudioGeneratorMP3 *mp3;
+AudioGeneratorWAV *wav;
 AudioFileSourceSD *file;
 AudioOutputI2S *out;
 int cs = 5;
@@ -59,14 +59,16 @@ unsigned long plannedNextScan; // used for timed PICC scanning
 float timeToNextScan = 1000;   // time in milliseconds
 byte *currentUID;
 byte *currentUIDlength;
-const String testUID = "04 D1 32 01 17 48 03";
+
+int cardHorse = 362;
+const char *horseSong = "annekaffekanne.wav";
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 
 const char *songs_1_MP3[] = {"dontgo.mp3", "pinguin.mp3", "dumbbell.mp3", "mrbluesky.mp3", "crabrave.mp3",
 							 "good4you.mp3", "bohemian.mp3", "moorhexe.mp3", "hedwig.mp3", "moveitmoveit.mp3",
 							 "faint.mp3", "wannabela.mp3", "omnissiah.mp3", "vampire.mp3", "paintitblack.mp3",
-							 "surf.mp3", "sympathyforthedevil.mp3", "turntostone.mp3", "amy.mp3", "dontstopmenow.mp3",
+							 "surf.mp3", "sympathyforthedevil.mp3", "turntostone.mp3", "dontstopmenow.mp3",
 							 "everybodyhides.mp3", "help.mp3", "honky.mp3", "hound.mp3", "hound.mp3", "igetaround.mp3",
 							 "isawher.mp3", "jailhouse.mp3", "killerqueen.mp3", "bottom2.mp3", NULL};
 int iteration = 0;
@@ -94,9 +96,9 @@ void setup()
 
 	audioLogger = &Serial;
 	out = new AudioOutputI2S();
-	mp3 = new AudioGeneratorMP3();
+	wav = new AudioGeneratorWAV();
 	buff = new AudioFileSourceBuffer(file, 2048);
-	out->SetGain(0.025f);
+	out->SetGain(0.3f);
 	randomSeed(analogRead(0));
 }
 
@@ -120,7 +122,7 @@ int randomNextSongIndex(const char *songarray[])
 int randomNextSongIndex(const char *songarray[], List<int> usedIndexes)
 {
 	size_t size = getArraySize(songarray);
-	
+
 	long randomNum = random(0, size);
 	bool searchNewIndex = true;
 
@@ -167,19 +169,20 @@ const char *changeSong(const char *songarray[], int index)
 
 void startPlayback(const char *filename)
 {
-	if (mp3->isRunning())
-		mp3->stop();
+	if (wav->isRunning())
+		wav->stop();
 	file = new AudioFileSourceSD(filename);
 	buff = new AudioFileSourceBuffer(file, 2048);
-	mp3->begin(buff, out);
+	wav->begin(buff, out);
 }
 
-bool scanForCard()
+int scanForCard()
 {
+	int uidSum = 0;
 	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
 	if (!mfrc522.PICC_IsNewCardPresent())
 	{
-		return false;
+		return -1;
 	}
 	else
 	{
@@ -187,55 +190,43 @@ bool scanForCard()
 		// Select one of the cards
 		if (!mfrc522.PICC_ReadCardSerial())
 		{
-			return false;
+			return -1;
 		}
 
 		// Dump debug info about the card; PICC_HaltA() is automatically called
+		uidSum = mfrc522.getUid(&(mfrc522.uid));
 		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
 	}
-	return true;
+	return uidSum;
 }
 
 void loop()
 {
-	// return;
 
-	if (mp3->isRunning())
+	if (wav->isRunning())
 	{
-		if (!mp3->loop())
-			mp3->stop();
-		notIncremented = true;
+		if (!wav->loop())
+			wav->stop();
 		unsigned long millisSinceStart = millis();
 		if (millisSinceStart > plannedNextScan)
 		{
-			bool isNewCard = scanForCard();
-			if (isNewCard)
+			int isNewCard = scanForCard();
+			if (isNewCard == cardHorse)
 			{
-				// new index, new file, load into audio engine
-				iteration = randomNextSongIndex(songs_1_MP3, songsPlayed);
-				songsPlayed.add(iteration);
-				const char *filename = changeSong(songs_1_MP3, iteration);
-				startPlayback(filename);
-				songsPlayed.add(iteration);
+				startPlayback(horseSong);
 			}
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
 		return;
 	}
-	else if (!mp3->isRunning() && notIncremented && !isFirstIteration)
+	else if (!wav->isRunning() && notIncremented && !isFirstIteration)
 	{
 		Serial.printf("done\n");
-		iteration = randomNextSongIndex(songs_1_MP3, songsPlayed);
-		songsPlayed.add(iteration);
-		notIncremented = false;
 		delay(1000);
 	}
-	bool isNewCard = scanForCard();
-	if (isNewCard)
+	int isNewCard = scanForCard();
+	if (isNewCard == cardHorse)
 	{
-		iteration = randomNextSongIndex(songs_1_MP3, songsPlayed);
-		const char *filename = changeSong(songs_1_MP3, iteration);
-		startPlayback(filename);
-		songsPlayed.add(iteration);
+		startPlayback(horseSong);
 	}
 }
