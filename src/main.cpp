@@ -23,6 +23,7 @@
 #include "AudioFileSourceBuffer.h"
 #include <RFIDLogic.h>
 
+//KEY VALUE PAIRS OF UID AND CORRESPONDING SONGS///////////////////
 char sa[] = "\"A.wav\"";
 int ka[10] = {4,193,93,1,109,72,3,0,0,0};
 KeyValue A = {sa, ka};
@@ -49,6 +50,7 @@ KeyValue Horse = {shorse, khorse};
 
 KeyValue songArray[] = {A,B,C,D,E,Horse};
 int songArrayLen = 6;
+///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
 // Sound Setup with I2s and audio CS PIN
 AudioGeneratorWAV *wav;
@@ -57,35 +59,24 @@ AudioOutputI2S *out;
 int cs = 5;
 AudioFileSourceBuffer *buff;
 
-// D3 - DIN, BCRL - D8, LRC - D4
-// D3 = GPIO 0, D8 = GPIO 15, D4 = GIPO 2
-// SD CS D1, GIPO 5
-
 // RFID PINS
 #define RST_PIN 4 // Configurable, see typical pin layout above
 #define SS_PIN 16
+MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 unsigned long plannedNextScan; // used for timed PICC scanning
 float timeToNextScan = 1000;   // time in milliseconds
-int currentSongUIDsum = 0;
-
-
-MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
-
-int iteration = 0;
-bool notIncremented = true;
 bool isFirstIteration = true;
 
 void setup()
 {
 
-	Serial.begin(115200);			   // Initialize serial communications with the PC
-	SPI.begin();					   // Init SPI bus
-	mfrc522.PCD_Init();				   // Init MFRC522
-	delay(4);						   // Optional delay. Some board do need more time after init to be ready, see Readme
-	mfrc522.PCD_DumpVersionToSerial(); // Show details of PCD - MFRC522 Card Reader details
+	Serial.begin(115200);			   
+	SPI.begin();					   
+	mfrc522.PCD_Init();				   
+	delay(4);
+	mfrc522.PCD_DumpVersionToSerial(); 
 
 	Serial.print("Initializing SD card...");
-
 	if (!SD.begin(cs))
 	{
 		Serial.println("initialization failed!");
@@ -114,6 +105,7 @@ int scanForCard(char* returnFileName)
 	return 1;
 }
 
+//takes in a character pointer of a filename, tries to play it with WAV driver.
 void startPlayback(const char *filename)
 {
 	if (wav->isRunning())
@@ -121,30 +113,29 @@ void startPlayback(const char *filename)
 	file = new AudioFileSourceSD(filename);
 	buff = new AudioFileSourceBuffer(file, 2048);
 	wav->begin(buff, out);
+	isFirstIteration = false;
 }
 
-void loop()
-{
+//scans for RFID card via Scan For Card function, tries to 
+//play back corresponding song in WAV format.
+void scanAndPlay(){
 	char songName[100];
 	memset(songName,0,sizeof(char)*100);
 	char* returnFileName = songName;
 	int cardFound = scanForCard(returnFileName);
-	if(cardFound>0) printf("song from UID: %s\n", returnFileName);
-	return;
+	if (cardFound > 0) startPlayback(returnFileName);
+}
+
+void loop()
+{
 	/*
 	if (wav->isRunning())
 	{
-		if (!wav->loop())
-			wav->stop();
+		if (!wav->loop()) wav->stop();
 		unsigned long millisSinceStart = millis();
 		if (millisSinceStart > plannedNextScan)
 		{
-			int isNewCard = scanForCard();
-			if (isNewCard == cardHorse && isNewCard != currentSongUIDsum)
-			{
-				startPlayback(horseSong);
-				currentSongUIDsum = isNewCard;
-			}
+			scanAndPlay();
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
 		return;
@@ -152,14 +143,8 @@ void loop()
 	else if (!wav->isRunning() && !isFirstIteration)
 	{
 		Serial.printf("done\n");
-		currentSongUIDsum = 0;
 		delay(1000);
 	}
-	int isNewCard = scanForCard();
-	if (isNewCard == cardHorse)
-	{
-		startPlayback(horseSong);
-		currentSongUIDsum = isNewCard;
-	}
+	scanAndPlay();
 	*/
 }
