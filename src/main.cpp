@@ -1,18 +1,4 @@
 /**
- * --------------------------------------------------------------------------------------------------------------------
- * Example sketch/program showing how to read data from more than one PICC to serial.
- * --------------------------------------------------------------------------------------------------------------------
- * This is a MFRC522 library example; for further details and other examples see: https://github.com/miguelbalboa/rfid
- *
- * Example sketch/program showing how to read data from more than one PICC (that is: a RFID Tag or Card) using a
- * MFRC522 based RFID Reader on the Arduino SPI interface.
- *
- * Warning: This may not work! Multiple devices at one SPI are difficult and cause many trouble!! Engineering skill
- *          and knowledge are required!
- *
- * @license Released into the public domain.
- *
- * Typical pin layout used:
  * -----------------------------------------------------------------------------------------
  *             MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino      ESP8266
  *             Reader/PCD   Uno/101       Mega      Nano v3    Leonardo/Micro   Pro Micro
@@ -24,22 +10,45 @@
  * SPI MOSI    MOSI         11 / ICSP-4   51        D11        ICSP-4           16           D7-GPIO 13
  * SPI MISO    MISO         12 / ICSP-1   50        D12        ICSP-1           14           D6-GPIO 12
  * SPI SCK     SCK          13 / ICSP-3   52        D13        ICSP-3           15           D5-GPIO 14
- *
- * More pin layouts for other boards can be found here: https://github.com/miguelbalboa/rfid#pin-layout
- *
  */
 
 #include <Arduino.h>
 #include <SPI.h>
 #include <MFRC522.h>
-#include <Regexp.h>
 
 #include "AudioFileSourceSD.h"
 #include "AudioGeneratorWAV.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
 #include "AudioFileSourceBuffer.h"
-#include <List.hpp>
+#include <RFIDLogic.h>
+
+char sa[] = "A.wav\0";
+int ka[10] = {4,193,93,1,109,72,3,0,0,0};
+KeyValue A = {sa, ka};
+
+char sb[] = "B.wav";
+int kb[10] = {4,209,32,1,126,72,3,0,0,0};
+KeyValue B = {sb, kb};
+
+char sc[] = "C.wav";
+int kc[10] = {4,144,255,1,61,77,3,0,0,0};
+KeyValue C = {sc, kc};
+
+char sd[] = "\"D\"";
+int kd[10] = {4,209,50,1,254,72,3,0,0,0};
+KeyValue D = {sd, kd};
+
+char se[] = "E.wav";
+int ke[10] = {4,193,178,1,89,72,3,0,0,0};
+KeyValue E = {se, ke};
+
+char shorse[] = "annekaffekanne.wav";
+int khorse[10] = {4,209,50,1,23,72,3,0,0,0};
+KeyValue Horse = {shorse, khorse};
+
+KeyValue songArray[] = {A,B,C,D,E,Horse};
+int songArrayLen = 6;
 
 // Sound Setup with I2s and audio CS PIN
 AudioGeneratorWAV *wav;
@@ -59,19 +68,10 @@ unsigned long plannedNextScan; // used for timed PICC scanning
 float timeToNextScan = 1000;   // time in milliseconds
 int currentSongUIDsum = 0;
 
-int cardHorse = 362;
-const char *horseSong = "annekaffekanne.wav";
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 
-const char *songs_1_MP3[] = {"dontgo.mp3", "pinguin.mp3", "dumbbell.mp3", "mrbluesky.mp3", "crabrave.mp3",
-							 "good4you.mp3", "bohemian.mp3", "moorhexe.mp3", "hedwig.mp3", "moveitmoveit.mp3",
-							 "faint.mp3", "wannabela.mp3", "omnissiah.mp3", "vampire.mp3", "paintitblack.mp3",
-							 "surf.mp3", "sympathyforthedevil.mp3", "turntostone.mp3", "dontstopmenow.mp3",
-							 "everybodyhides.mp3", "help.mp3", "honky.mp3", "hound.mp3", "hound.mp3", "igetaround.mp3",
-							 "isawher.mp3", "jailhouse.mp3", "killerqueen.mp3", "bottom2.mp3", NULL};
 int iteration = 0;
-List<int> songsPlayed;
 bool notIncremented = true;
 bool isFirstIteration = true;
 
@@ -101,61 +101,21 @@ void setup()
 	randomSeed(analogRead(0));
 }
 
-size_t getArraySize(const char *array[])
+int scanForCard()
 {
-	size_t size = 0;
-	while (array[size] != NULL)
-	{
-		size++;
+	if (!mfrc522.PICC_IsNewCardPresent()) return -1;
+	else{
+		if (!mfrc522.PICC_ReadCardSerial())	return -1;
+		char songName[100];
+		char* sn = songName;
+		int status = getSongNameFromTag(mfrc522.uid.uidByte, mfrc522.uid.size, songArray, songArrayLen, sn);
+		int comp = compareUids(A.key, B.key);
+		Serial.printf("%s\nstatus: %d\ncomparison a and b: %d\n", sn,status,comp);
+		
+		
+		mfrc522.PICC_HaltA();
 	}
-	return size;
-}
-
-int randomNextSongIndex(const char *songarray[])
-{
-	size_t size = getArraySize(songarray);
-	long randomNum = random(0, size);
-	return (int)randomNum;
-}
-
-int randomNextSongIndex(const char *songarray[], List<int> usedIndexes)
-{
-	size_t size = getArraySize(songarray);
-
-	long randomNum = random(0, size);
-	bool searchNewIndex = true;
-
-	if (usedIndexes.isEmpty())
-	{
-		Serial.println("list is empty!!");
-		return randomNum;
-	}
-
-	while (searchNewIndex)
-	{
-		for (int j = 0; j < usedIndexes.getSize(); j++)
-		{
-			int potentiallyUsed = usedIndexes.get(j);
-			if (randomNum == potentiallyUsed)
-			{
-				randomNum = random(0, size);
-				searchNewIndex = true;
-				break;
-			}
-			searchNewIndex = false;
-		}
-	}
-
-	Serial.println("number found: " + randomNum);
-	return (int)randomNum;
-}
-
-int subsequentIndex(const char *songarray[])
-{
-	int num = iteration + 1;
-	int getArrayLength = getArraySize(songarray);
-	num = num % getArrayLength;
-	return num;
+	return 1;
 }
 
 const char *changeSong(const char *songarray[], int index)
@@ -175,33 +135,13 @@ void startPlayback(const char *filename)
 	wav->begin(buff, out);
 }
 
-int scanForCard()
-{
-	int uidSum = -1;
-	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-	if (!mfrc522.PICC_IsNewCardPresent())
-	{
-		return -1;
-	}
-	else
-	{
 
-		// Select one of the cards
-		if (!mfrc522.PICC_ReadCardSerial())
-		{
-			return -1;
-		}
-
-		// Dump debug info about the card; PICC_HaltA() is automatically called
-		uidSum = mfrc522.getUid(&(mfrc522.uid));
-		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-	}
-	return uidSum;
-}
 
 void loop()
 {
-
+	scanForCard();
+	return;
+	/*
 	if (wav->isRunning())
 	{
 		if (!wav->loop())
@@ -231,4 +171,5 @@ void loop()
 		startPlayback(horseSong);
 		currentSongUIDsum = isNewCard;
 	}
+	*/
 }
