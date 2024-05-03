@@ -23,15 +23,15 @@
 #include "AudioFileSourceBuffer.h"
 #include <RFIDLogic.h>
 
-char sa[] = "A.wav\0";
+char sa[] = "\"A.wav\"";
 int ka[10] = {4,193,93,1,109,72,3,0,0,0};
 KeyValue A = {sa, ka};
 
-char sb[] = "B.wav";
+char sb[] = "\"B.wav\"";
 int kb[10] = {4,209,32,1,126,72,3,0,0,0};
 KeyValue B = {sb, kb};
 
-char sc[] = "C.wav";
+char sc[] = "\"C.wav\"";
 int kc[10] = {4,144,255,1,61,77,3,0,0,0};
 KeyValue C = {sc, kc};
 
@@ -39,11 +39,11 @@ char sd[] = "\"D\"";
 int kd[10] = {4,209,50,1,254,72,3,0,0,0};
 KeyValue D = {sd, kd};
 
-char se[] = "E.wav";
+char se[] = "\"E.wav\"";
 int ke[10] = {4,193,178,1,89,72,3,0,0,0};
 KeyValue E = {se, ke};
 
-char shorse[] = "annekaffekanne.wav";
+char shorse[] = "\"annekaffekanne.wav\"";
 int khorse[10] = {4,209,50,1,23,72,3,0,0,0};
 KeyValue Horse = {shorse, khorse};
 
@@ -101,29 +101,17 @@ void setup()
 	randomSeed(analogRead(0));
 }
 
-int scanForCard()
+//Scans for a new RFID card, returns the file name if UID matches, 
+//returns null pointer if there is no match. in this case the return type int of the function returns -1.
+int scanForCard(char* returnFileName)
 {
 	if (!mfrc522.PICC_IsNewCardPresent()) return -1;
 	else{
 		if (!mfrc522.PICC_ReadCardSerial())	return -1;
-		char songName[100];
-		char* sn = songName;
-		int status = getSongNameFromTag(mfrc522.uid.uidByte, mfrc522.uid.size, songArray, songArrayLen, sn);
-		int comp = compareUids(A.key, B.key);
-		Serial.printf("%s\nstatus: %d\ncomparison a and b: %d\n", sn,status,comp);
-		
-		
+		getSongNameFromTag(mfrc522.uid.uidByte, songArray, songArrayLen, returnFileName);
 		mfrc522.PICC_HaltA();
 	}
 	return 1;
-}
-
-const char *changeSong(const char *songarray[], int index)
-{
-	Serial.println("index: " + index);
-	const char *filename = songarray[index];
-	isFirstIteration = false;
-	return filename;
 }
 
 void startPlayback(const char *filename)
@@ -135,11 +123,13 @@ void startPlayback(const char *filename)
 	wav->begin(buff, out);
 }
 
-
-
 void loop()
 {
-	scanForCard();
+	char songName[100];
+	memset(songName,0,sizeof(char)*100);
+	char* returnFileName = songName;
+	int cardFound = scanForCard(returnFileName);
+	if(cardFound>0) printf("song from UID: %s\n", returnFileName);
 	return;
 	/*
 	if (wav->isRunning())

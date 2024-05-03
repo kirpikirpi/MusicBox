@@ -3,27 +3,25 @@
 //returns one if they are the same, -1 if not.
 int compareUids(int* uidOne ,int* uidTwo){
 	for (int i = 0; i< 10; i++){
-		if(uidOne[i] == uidTwo[i]){
-		}
+		if(uidOne[i] != uidTwo[i]) return -1;
 	}
-	return -1;
+	return 1;
 }
 
+
 //returns corresponding song name to uid in fileName.
-int getSongNameFromTag(byte* uid, int len, KeyValue* songArray, int songArrayLen, char* fileName){
-	int uidArray[10];
-	getUidInt(uid, len, uidArray); 
+int getSongNameFromTag(byte* scannedUid, KeyValue* songArray, int songArrayLen, char* fileName) {
+	int scannedUidArray[10];
+	getUidInt(scannedUid, 10, scannedUidArray);
 	
-	for (int i = 0; i< songArrayLen; i++){
-		for(int j=0;j<10;j++){
-			if(songArray[i].key[j] != uidArray[j]) break;
-			if (j<=0){
-				char* sn = songArray[i].songName;
-				while(*sn) *fileName++ = *sn++;
-				return j;
-			}
+	for (int i = 0; i < songArrayLen; i++) {
+		if (compareUids(scannedUidArray, songArray[i].key)>0) {
+			char* sn = songArray[i].songName;
+			while (*sn) *fileName++ = *sn++;
+			return 1;
 		}
 	}
+	fileName = NULL;
 	return -1;
 }
 

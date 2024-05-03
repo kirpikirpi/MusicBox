@@ -8,6 +8,6 @@ struct KeyValue{
 };
 
 int compareUids(int* uidOne ,int* uidTwo);
-int getSongNameFromTag(byte* uid, int len, KeyValue* songArray, int songArrayLen, char* fileName);
+int getSongNameFromTag(byte* scannedUid, KeyValue* songArray, int songArrayLen, char* fileName);
 int getUidInt(byte* uid, int len, int* uidInt);
 //int scanForCard();
