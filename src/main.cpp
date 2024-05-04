@@ -24,7 +24,7 @@
 #include <RFIDLogic.h>
 
 //KEY VALUE PAIRS OF UID AND CORRESPONDING SONGS///////////////////
-char sa[] = "BeatlesStandingThere.wav";
+char sa[] = {"BeatlesStandingThere.wav"};
 int ka[10] = {4,193,93,1,109,72,3,0,0,0};
 KeyValue A = {sa, ka};
 
@@ -52,8 +52,24 @@ char sF[] = "SympathyForTheDevil.wav";
 int kF[10] = {4,193,135,1,214,72,3,0,0,0};
 KeyValue Bear = {sF, kF};
 
-KeyValue songArray[] = {A,B,C,D,E,Horse,Bear};
-int songArrayLen = 7;
+char sH[] = "Moorhexe.wav";
+int kH[] = {4,209,52,1,109,72,3,0,0,0};
+KeyValue H = {sH,kH};
+
+char sG[] = "DontGo.wav";
+int kG[] = {4,193,129,1,124,72,3,0,0,0};
+KeyValue G = {sG, kG};
+
+char sMushroom[] = "CrabRave.wav";
+int kMushroom[] = {4,209,17,1,211,72,3,0,0,0};
+KeyValue Mushroom = {sMushroom, kMushroom};
+
+char sBlueHouse[] = "DumbBell.wav";
+int kBlueHouse[] = {4,193,92,1,74,72,3,0,0,0};
+KeyValue bHouse = {sBlueHouse, kBlueHouse};
+
+KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse};
+int songArrayLen = 11;
 ///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
 // Sound Setup with I2s and audio CS PIN
@@ -95,6 +111,8 @@ void setup()
 	out->SetGain(0.3f);
 	randomSeed(analogRead(0));
 }
+
+//prints out the currently scanned UID
 void printUID(byte* uid, int len){
 	int uidArray[10];
 	memset(uidArray, 0, sizeof(int)*10);
@@ -143,7 +161,6 @@ void scanAndPlay(){
 
 void loop()
 {
-	
 	if (wav->isRunning())
 	{
 		if (!wav->loop()) wav->stop();
@@ -161,5 +178,4 @@ void loop()
 		delay(1000);
 	}
 	scanAndPlay();
-	
 }
