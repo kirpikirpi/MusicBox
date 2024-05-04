@@ -32,30 +32,3 @@ int getUidInt(byte* uid, int len, int* uidInt){
 	}
 	return 1;
 }
-
-/*int scanForCard()
-{
-	
-	int uidSum = -1;
-	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
-	if (!mfrc522.PICC_IsNewCardPresent())
-	{
-		return -1;
-	}
-	else
-	{
-
-		// Select one of the cards
-		if (!mfrc522.PICC_ReadCardSerial())
-		{
-			return -1;
-		}
-
-		// Dump debug info about the card; PICC_HaltA() is automatically called
-		uidSum = mfrc522.getUid(&(mfrc522.uid));
-		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-	}
-	return uidSum;
-	
-return -1;
-}*/

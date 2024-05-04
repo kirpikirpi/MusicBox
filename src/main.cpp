@@ -24,32 +24,36 @@
 #include <RFIDLogic.h>
 
 //KEY VALUE PAIRS OF UID AND CORRESPONDING SONGS///////////////////
-char sa[] = "\"A.wav\"";
+char sa[] = "BeatlesStandingThere.wav";
 int ka[10] = {4,193,93,1,109,72,3,0,0,0};
 KeyValue A = {sa, ka};
 
-char sb[] = "\"B.wav\"";
+char sb[] = "tante_marokko.wav";
 int kb[10] = {4,209,32,1,126,72,3,0,0,0};
 KeyValue B = {sb, kb};
 
-char sc[] = "\"C.wav\"";
+char sc[] = "PenguenJudoka.wav";
 int kc[10] = {4,144,255,1,61,77,3,0,0,0};
 KeyValue C = {sc, kc};
 
-char sd[] = "\"D\"";
+char sd[] = "Faint.wav";
 int kd[10] = {4,209,50,1,254,72,3,0,0,0};
 KeyValue D = {sd, kd};
 
-char se[] = "\"E.wav\"";
+char se[] = "bieberfieber.wav";
 int ke[10] = {4,193,178,1,89,72,3,0,0,0};
 KeyValue E = {se, ke};
 
-char shorse[] = "\"annekaffekanne.wav\"";
+char shorse[] = "annekaffekanne.wav";
 int khorse[10] = {4,209,50,1,23,72,3,0,0,0};
 KeyValue Horse = {shorse, khorse};
 
-KeyValue songArray[] = {A,B,C,D,E,Horse};
-int songArrayLen = 6;
+char sF[] = "SympathyForTheDevil.wav";
+int kF[10] = {4,193,135,1,214,72,3,0,0,0};
+KeyValue Bear = {sF, kF};
+
+KeyValue songArray[] = {A,B,C,D,E,Horse,Bear};
+int songArrayLen = 7;
 ///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
 // Sound Setup with I2s and audio CS PIN
@@ -91,6 +95,16 @@ void setup()
 	out->SetGain(0.3f);
 	randomSeed(analogRead(0));
 }
+void printUID(byte* uid, int len){
+	int uidArray[10];
+	memset(uidArray, 0, sizeof(int)*10);
+	getUidInt(uid, len, uidArray);
+	Serial.printf("Scanned UID: ");
+	for(int i=0;i<10;i++){
+		Serial.printf("%d,", uidArray[i]);
+	}
+	Serial.println();
+}
 
 //Scans for a new RFID card, returns the file name if UID matches, 
 //returns null pointer if there is no match. in this case the return type int of the function returns -1.
@@ -101,6 +115,7 @@ int scanForCard(char* returnFileName)
 		if (!mfrc522.PICC_ReadCardSerial())	return -1;
 		getSongNameFromTag(mfrc522.uid.uidByte, songArray, songArrayLen, returnFileName);
 		mfrc522.PICC_HaltA();
+		printUID(mfrc522.uid.uidByte, mfrc522.uid.size);
 	}
 	return 1;
 }
@@ -128,7 +143,7 @@ void scanAndPlay(){
 
 void loop()
 {
-	/*
+	
 	if (wav->isRunning())
 	{
 		if (!wav->loop()) wav->stop();
@@ -146,5 +161,5 @@ void loop()
 		delay(1000);
 	}
 	scanAndPlay();
-	*/
+	
 }
