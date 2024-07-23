@@ -9,7 +9,7 @@ int compareUids(int* uidOne ,int* uidTwo){
 }
 
 
-//returns corresponding song name to uid in fileName.
+//returns corresponding song name to uid in fileName. returns -1 if not found.
 int getSongNameFromTag(byte* scannedUid, KeyValue* songArray, int songArrayLen, char* fileName) {
 	int scannedUidArray[10];
 	getUidInt(scannedUid, 10, scannedUidArray);

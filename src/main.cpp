@@ -40,9 +40,9 @@ char sd[] = "Faint.wav";
 int kd[10] = {4,209,50,1,254,72,3,0,0,0};
 KeyValue D = {sd, kd};
 
-char se[] = "bieberfieber.wav";
-int ke[10] = {4,193,178,1,89,72,3,0,0,0};
-KeyValue E = {se, ke};
+char sElk[] = "bieberfieber.wav";
+int kElk[10] = {4,193,121,1,65,72,3,0,0,0};
+KeyValue E = {sElk, kElk};
 
 char shorse[] = "annekaffekanne.wav";
 int khorse[10] = {4,209,50,1,23,72,3,0,0,0};
@@ -64,12 +64,20 @@ char sMushroom[] = "CrabRave.wav";
 int kMushroom[] = {4,209,17,1,211,72,3,0,0,0};
 KeyValue Mushroom = {sMushroom, kMushroom};
 
-char sBlueHouse[] = "DumbBell.wav";
+char sBlueHouse[] = "Help.wav";
 int kBlueHouse[] = {4,193,92,1,74,72,3,0,0,0};
 KeyValue bHouse = {sBlueHouse, kBlueHouse};
 
-KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse};
-int songArrayLen = 11;
+char sZylinder[] = "DontStopMeNow.wav";
+int kZylinder[] = {4,209,27,1,187,72,3,0,0,0};
+KeyValue zylinder = {sZylinder, kZylinder};
+
+char sZylinder2[] = "BohemianRhapsody.wav";
+int kZylinder2[] = {4,193,169,1,220,72,3,0,0,0};
+KeyValue zylinder2 = {sZylinder2, kZylinder2};
+
+KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2};
+int songArrayLen = 13;
 ///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
 // Sound Setup with I2s and audio CS PIN
@@ -108,7 +116,7 @@ void setup()
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
 	buff = new AudioFileSourceBuffer(file, 2048);
-	out->SetGain(0.3f);
+	out->SetGain(0.24f); //0.24f
 	randomSeed(analogRead(0));
 }
 
@@ -131,7 +139,7 @@ int scanForCard(char* returnFileName)
 	if (!mfrc522.PICC_IsNewCardPresent()) return -1;
 	else{
 		if (!mfrc522.PICC_ReadCardSerial())	return -1;
-		getSongNameFromTag(mfrc522.uid.uidByte, songArray, songArrayLen, returnFileName);
+	    getSongNameFromTag(mfrc522.uid.uidByte, songArray, songArrayLen, returnFileName);
 		mfrc522.PICC_HaltA();
 		printUID(mfrc522.uid.uidByte, mfrc522.uid.size);
 	}
@@ -157,6 +165,7 @@ void scanAndPlay(){
 	char* returnFileName = songName;
 	int cardFound = scanForCard(returnFileName);
 	if (cardFound > 0) startPlayback(returnFileName);
+	if(returnFileName == NULL) wav->stop();
 }
 
 void loop()
