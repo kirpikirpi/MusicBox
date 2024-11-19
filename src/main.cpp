@@ -76,8 +76,12 @@ char sZylinder2[] = "BohemianRhapsody.wav";
 int kZylinder2[] = {4,193,169,1,220,72,3,0,0,0};
 KeyValue zylinder2 = {sZylinder2, kZylinder2};
 
-KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2};
-int songArrayLen = 13;
+char sSleep[] = "DEEP_SLEEP";
+int kSleep[] = {4,209,52,1,107,72,3,0,0,0};
+KeyValue kvSleep = {sSleep, kSleep};
+
+KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2,kvSleep};
+int songArrayLen = 14;
 ///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
 // Sound Setup with I2s and audio CS PIN
@@ -131,6 +135,12 @@ void printUID(byte* uid, int len){
 	}
 	Serial.println();
 }
+//Trigger deep sleep, awake on reboot (RST Pin)
+void startDeepSleep(){
+	Serial.println("Going to deep sleep...");
+	ESP.deepSleep(0);
+}
+
 
 //Scans for a new RFID card, returns the file name if UID matches, 
 //returns null pointer if there is no match. in this case the return type int of the function returns -1.
@@ -141,6 +151,9 @@ int scanForCard(char* returnFileName)
 		if (!mfrc522.PICC_ReadCardSerial())	return -1;
 	    getSongNameFromTag(mfrc522.uid.uidByte, songArray, songArrayLen, returnFileName);
 		mfrc522.PICC_HaltA();
+		int scannedUidArray[10];
+		getUidInt(mfrc522.uid.uidByte, 10, scannedUidArray);
+		if(compareUids(scannedUidArray,kSleep)) startDeepSleep();
 		printUID(mfrc522.uid.uidByte, mfrc522.uid.size);
 	}
 	return 1;
@@ -168,6 +181,8 @@ void scanAndPlay(){
 	if(returnFileName == NULL) wav->stop();
 }
 
+unsigned long lastTimestamp = 0;
+unsigned long timeUntilSleep = 1000*60*30;
 void loop()
 {
 	if (wav->isRunning())
@@ -179,8 +194,10 @@ void loop()
 			scanAndPlay();
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
+		lastTimestamp = millis();
 		return;
 	}
+	else if(millis()>(lastTimestamp+timeUntilSleep)) startDeepSleep();
 	else if (!wav->isRunning() && !isFirstIteration)
 	{
 		Serial.printf("done\n");
