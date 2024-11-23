@@ -99,15 +99,22 @@ unsigned long plannedNextScan; // used for timed PICC scanning
 float timeToNextScan = 1000;   // time in milliseconds
 bool isFirstIteration = true;
 
+//POWER OFF FUNCTIONALITY
+#define OFF_PIN 10 //GIPO 10 PIN SD3
+unsigned long lastTimestamp = 0;
+unsigned long timeUntilSleep = 1000*60*30; //mins until automatic shutdown
+
 void setup()
 {
-
+	pinMode(OFF_PIN,OUTPUT);
+	digitalWrite(OFF_PIN,HIGH); //PNP tranisitor disabled on HIGH
+	
 	Serial.begin(115200);			   
 	SPI.begin();					   
 	mfrc522.PCD_Init();				   
 	delay(4);
 	mfrc522.PCD_DumpVersionToSerial(); 
-
+	
 	Serial.print("Initializing SD card...");
 	if (!SD.begin(cs))
 	{
@@ -135,10 +142,10 @@ void printUID(byte* uid, int len){
 	}
 	Serial.println();
 }
-//Trigger deep sleep, awake on reboot (RST Pin)
-void startDeepSleep(){
-	Serial.println("Going to deep sleep...");
-	ESP.deepSleep(0);
+//Trigger shutdown, activation with external MOSFET
+void initiateShutdown(){
+	Serial.println("Shutting down...");
+	digitalWrite(OFF_PIN,LOW);
 }
 
 
@@ -151,9 +158,6 @@ int scanForCard(char* returnFileName)
 		if (!mfrc522.PICC_ReadCardSerial())	return -1;
 	    getSongNameFromTag(mfrc522.uid.uidByte, songArray, songArrayLen, returnFileName);
 		mfrc522.PICC_HaltA();
-		int scannedUidArray[10];
-		getUidInt(mfrc522.uid.uidByte, 10, scannedUidArray);
-		if(compareUids(scannedUidArray,kSleep)) startDeepSleep();
 		printUID(mfrc522.uid.uidByte, mfrc522.uid.size);
 	}
 	return 1;
@@ -181,8 +185,7 @@ void scanAndPlay(){
 	if(returnFileName == NULL) wav->stop();
 }
 
-unsigned long lastTimestamp = 0;
-unsigned long timeUntilSleep = 1000*60*30;
+
 void loop()
 {
 	if (wav->isRunning())
@@ -197,7 +200,7 @@ void loop()
 		lastTimestamp = millis();
 		return;
 	}
-	else if(millis()>(lastTimestamp+timeUntilSleep)) startDeepSleep();
+	else if(millis()>(lastTimestamp+timeUntilSleep)) initiateShutdown();
 	else if (!wav->isRunning() && !isFirstIteration)
 	{
 		Serial.printf("done\n");
