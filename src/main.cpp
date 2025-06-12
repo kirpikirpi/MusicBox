@@ -76,12 +76,20 @@ char sZylinder2[] = "BohemianRhapsody.wav";
 int kZylinder2[] = {4,193,169,1,220,72,3,0,0,0};
 KeyValue zylinder2 = {sZylinder2, kZylinder2};
 
+char sBuilder[] = "BeatlesMonkey.wav";
+int kBuilder[] = {4,144,156,1,212,77,3,0,0,0};
+KeyValue builder= {sBuilder, kBuilder};
+
+char sGreenHouse[] = "good4u.wav";
+int kGreenHouse[] = {4,225,179,1,179,5,3,0,0,0};
+KeyValue greenHouse = {sGreenHouse, kGreenHouse};
+
 char sSleep[] = "DEEP_SLEEP";
 int kSleep[] = {4,209,52,1,107,72,3,0,0,0};
 KeyValue kvSleep = {sSleep, kSleep};
 
-KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2,kvSleep};
-int songArrayLen = 14;
+KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2,kvSleep,greenHouse,builder};
+int songArrayLen = 16;
 ///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
 // Sound Setup with I2s and audio CS PIN
@@ -127,7 +135,7 @@ void setup()
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
 	buff = new AudioFileSourceBuffer(file, 2048);
-	out->SetGain(0.24f); //0.24f
+	out->SetGain(0.22f); //0.24f should be max
 	randomSeed(analogRead(0));
 }
 
