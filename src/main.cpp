@@ -15,7 +15,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <MFRC522.h>
-
+#include <CapacitiveSensor.h>
 #include "AudioFileSourceSD.h"
 #include "AudioGeneratorWAV.h"
 #include "AudioOutputI2S.h"
@@ -118,7 +118,8 @@ void setup()
 	digitalWrite(OFF_PIN,HIGH); //PNP tranisitor disabled on HIGH
 	
 	Serial.begin(115200);			   
-	SPI.begin();					   
+	SPI.begin();			
+	   
 	mfrc522.PCD_Init();				   
 	delay(4);
 	mfrc522.PCD_DumpVersionToSerial(); 
@@ -135,7 +136,7 @@ void setup()
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
 	buff = new AudioFileSourceBuffer(file, 2048);
-	out->SetGain(0.22f); //0.24f should be max
+	out->SetGain(0.20f); //0.24f should be max
 	randomSeed(analogRead(0));
 }
 
