@@ -15,13 +15,13 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <MFRC522.h>
-#include <CapacitiveSensor.h>
 #include "AudioFileSourceSD.h"
 #include "AudioGeneratorWAV.h"
 #include "AudioOutputI2S.h"
 #include "I2S.h"
 #include "AudioFileSourceBuffer.h"
 #include <RFIDLogic.h>
+#include <EEPROM.h>
 
 //KEY VALUE PAIRS OF UID AND CORRESPONDING SONGS///////////////////
 char sa[] = {"BeatlesStandingThere.wav"};
@@ -107,15 +107,17 @@ unsigned long plannedNextScan; // used for timed PICC scanning
 float timeToNextScan = 1000;   // time in milliseconds
 bool isFirstIteration = true;
 
-//POWER OFF FUNCTIONALITY
-#define OFF_PIN 10 //GIPO 10 PIN SD3
-unsigned long lastTimestamp = 0;
-unsigned long timeUntilSleep = 1000*60*30; //mins until automatic shutdown
+// VOLUME CONTROL
+#define LOW_VOLUME 10 //GIPO 10 PIN SD3
+#define HIGH_VOLUME 9 //GIPO 9 PIN SD2
+float gain = 0.00f; //0.24f should be max
+int low_b_prev_state = 1; //input of low button in the last iteration
+int high_b_prev_state = 1; //input of high button in the last iteration
 
 void setup()
 {
-	pinMode(OFF_PIN,OUTPUT);
-	digitalWrite(OFF_PIN,HIGH); //PNP tranisitor disabled on HIGH
+	pinMode(HIGH_VOLUME,INPUT_PULLUP);
+	pinMode(LOW_VOLUME,INPUT_PULLUP);
 	
 	Serial.begin(115200);			   
 	SPI.begin();			
@@ -136,8 +138,7 @@ void setup()
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
 	buff = new AudioFileSourceBuffer(file, 2048);
-	out->SetGain(0.20f); //0.24f should be max
-	randomSeed(analogRead(0));
+	out->SetGain(gain);
 }
 
 //prints out the currently scanned UID
@@ -150,11 +151,6 @@ void printUID(byte* uid, int len){
 		Serial.printf("%d,", uidArray[i]);
 	}
 	Serial.println();
-}
-//Trigger shutdown, activation with external MOSFET
-void initiateShutdown(){
-	Serial.println("Shutting down...");
-	digitalWrite(OFF_PIN,LOW);
 }
 
 
@@ -197,6 +193,20 @@ void scanAndPlay(){
 
 void loop()
 {
+	int lower_volume = digitalRead(LOW_VOLUME);
+	int higher_volume = digitalRead(HIGH_VOLUME);
+	if(lower_volume<=0 && low_b_prev_state) gain -= 0.05f;
+	else if(higher_volume<=0 && high_b_prev_state) gain += 0.05f;
+	gain = constrain(gain, 0,0.24f);
+	Serial.print("Gain: ");
+	Serial.println(gain);
+	out->SetGain(gain);
+	low_b_prev_state = lower_volume;
+	high_b_prev_state = higher_volume;
+	delay(10);
+
+	return;
+
 	if (wav->isRunning())
 	{
 		if (!wav->loop()) wav->stop();
@@ -206,10 +216,9 @@ void loop()
 			scanAndPlay();
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
-		lastTimestamp = millis();
+		
 		return;
 	}
-	else if(millis()>(lastTimestamp+timeUntilSleep)) initiateShutdown();
 	else if (!wav->isRunning() && !isFirstIteration)
 	{
 		Serial.printf("done\n");
