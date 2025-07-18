@@ -108,16 +108,17 @@ float timeToNextScan = 1000;   // time in milliseconds
 bool isFirstIteration = true;
 
 // VOLUME CONTROL
-#define LOW_VOLUME 10 //GIPO 10 PIN SD3
-#define HIGH_VOLUME 9 //GIPO 9 PIN SD2
-float gain = 0.00f; //0.24f should be max
+#define LOW_VOLUME 0 //(GIPO 9 PIN SD2)-> GIPO 0 PIN D3
+#define HIGH_VOLUME 10 //GIPO 10 PIN SD3
+float gain = 0.07f; //0.24f should be max
+float step = 0.02f;
 int low_b_prev_state = 1; //input of low button in the last iteration
 int high_b_prev_state = 1; //input of high button in the last iteration
 
 void setup()
 {
-	pinMode(HIGH_VOLUME,INPUT_PULLUP);
-	pinMode(LOW_VOLUME,INPUT_PULLUP);
+	pinMode(HIGH_VOLUME, INPUT_PULLUP);
+	pinMode(LOW_VOLUME, INPUT_PULLUP);
 	
 	Serial.begin(115200);			   
 	SPI.begin();			
@@ -190,23 +191,29 @@ void scanAndPlay(){
 	if(returnFileName == NULL) wav->stop();
 }
 
+float adjustGain(float currGain, bool debug){
+	float g = currGain;
+	int lower_volume = digitalRead(LOW_VOLUME);
+	int higher_volume = digitalRead(HIGH_VOLUME);
+	if(lower_volume<=0 && low_b_prev_state>0) g -= step;
+	else if(higher_volume<=0 && high_b_prev_state>0) g += step;
+	g = constrain(g, 0,0.24f);
+	if(debug){
+		Serial.print("Gain: ");
+		Serial.println(g);
+		delay(10);
+		return 0.0f;
+	}
+	low_b_prev_state = lower_volume;
+	high_b_prev_state = higher_volume;
+	return g;
+}
+
 
 void loop()
 {
-	int lower_volume = digitalRead(LOW_VOLUME);
-	int higher_volume = digitalRead(HIGH_VOLUME);
-	if(lower_volume<=0 && low_b_prev_state) gain -= 0.05f;
-	else if(higher_volume<=0 && high_b_prev_state) gain += 0.05f;
-	gain = constrain(gain, 0,0.24f);
-	Serial.print("Gain: ");
-	Serial.println(gain);
+	gain = adjustGain(gain, false);
 	out->SetGain(gain);
-	low_b_prev_state = lower_volume;
-	high_b_prev_state = higher_volume;
-	delay(10);
-
-	return;
-
 	if (wav->isRunning())
 	{
 		if (!wav->loop()) wav->stop();
