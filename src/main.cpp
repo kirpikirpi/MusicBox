@@ -88,8 +88,16 @@ char sSleep[] = "DEEP_SLEEP";
 int kSleep[] = {4,209,52,1,107,72,3,0,0,0};
 KeyValue kvSleep = {sSleep, kSleep};
 
-KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2,kvSleep,greenHouse,builder};
-int songArrayLen = 16;
+char sbear[] = "Chantaje.wav";
+int kbear[] = {4,193,150,1,240,72,3,0,0,0};
+KeyValue kvbear = {sbear, kbear};
+
+char spptrol[] = "Duality.wav";
+int kpptrol[] = {4,160,58,1,245,77,3,0,0,0};
+KeyValue kvpptrol = {spptrol, kpptrol};
+
+KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2,kvSleep,greenHouse,builder,kvbear,kvpptrol};
+int songArrayLen = 18;
 ///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
 // Sound Setup with I2s and audio CS PIN
