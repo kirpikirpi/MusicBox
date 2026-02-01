@@ -24,7 +24,7 @@
 #include <EEPROM.h>
 
 //KEY VALUE PAIRS OF UID AND CORRESPONDING SONGS///////////////////
-char sa[] = {"BeatlesStandingThere.wav"};
+char sa[] = {"RedHouse.wav"};
 int ka[10] = {4,193,93,1,109,72,3,0,0,0};
 KeyValue A = {sa, ka};
 
@@ -64,7 +64,7 @@ char sMushroom[] = "CrabRave.wav";
 int kMushroom[] = {4,209,17,1,211,72,3,0,0,0};
 KeyValue Mushroom = {sMushroom, kMushroom};
 
-char sBlueHouse[] = "Help.wav";
+char sBlueHouse[] = "Chantaje.wav";
 int kBlueHouse[] = {4,193,92,1,74,72,3,0,0,0};
 KeyValue bHouse = {sBlueHouse, kBlueHouse};
 
@@ -76,7 +76,7 @@ char sZylinder2[] = "BohemianRhapsody.wav";
 int kZylinder2[] = {4,193,169,1,220,72,3,0,0,0};
 KeyValue zylinder2 = {sZylinder2, kZylinder2};
 
-char sBuilder[] = "BeatlesMonkey.wav";
+char sBuilder[] = "vogelhochzeit.wav";
 int kBuilder[] = {4,144,156,1,212,77,3,0,0,0};
 KeyValue builder= {sBuilder, kBuilder};
 
@@ -88,7 +88,7 @@ char sSleep[] = "DEEP_SLEEP";
 int kSleep[] = {4,209,52,1,107,72,3,0,0,0};
 KeyValue kvSleep = {sSleep, kSleep};
 
-char sbear[] = "Chantaje.wav";
+char sbear[] = "bibabutzemann.wav";
 int kbear[] = {4,193,150,1,240,72,3,0,0,0};
 KeyValue kvbear = {sbear, kbear};
 
@@ -96,8 +96,12 @@ char spptrol[] = "Duality.wav";
 int kpptrol[] = {4,160,58,1,245,77,3,0,0,0};
 KeyValue kvpptrol = {spptrol, kpptrol};
 
-KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2,kvSleep,greenHouse,builder,kvbear,kvpptrol};
-int songArrayLen = 18;
+char scat[] = "auf_der_mauer.wav";
+int kcat[] = {4,209,66,1,143,72,3,0,0,0};
+KeyValue kvcat = {scat, kcat};
+
+KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylinder2,kvSleep,greenHouse,builder,kvbear,kvpptrol,kvcat};
+int songArrayLen = 19;
 ///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
 // Sound Setup with I2s and audio CS PIN
