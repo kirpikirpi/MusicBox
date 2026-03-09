@@ -96,7 +96,7 @@ char spptrol[] = "Duality.wav";
 int kpptrol[] = {4,160,58,1,245,77,3,0,0,0};
 KeyValue kvpptrol = {spptrol, kpptrol};
 
-char scat[] = "auf_der_mauer.wav";
+char scat[] = "Bloodline.wav";
 int kcat[] = {4,209,66,1,143,72,3,0,0,0};
 KeyValue kvcat = {scat, kcat};
 

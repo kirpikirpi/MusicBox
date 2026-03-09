@@ -1,0 +1,12 @@
+Description of the shutdown circuit
+
+The circuit employs two relais:
+- first one to shut down at a battery voltage of around 2.5 to 2.7V
+- second one to bridge GND to the step up module (and thus to whole system)
+
+Only the 2 relais and the push button directly connect to the battery's GND.
+To switch on the first relais (wich is on NC, Normally Closed position) and thus disconnect the rest of the device, a voltage divider circuit is employed. the first resistance has around 630 Ohms, the second resistor 220 Ohms. It is designed so that if the battery voltage drops to 2.5 to 2.7V, the divider provides around 0.7V, wich is under the threshold voltage for the input pin of the relais. The relais switches on a NEGATIVE signal and is inactive at a positive signal.
+The first relais switches to the NO (Normally Open) position and connects a LED directly to the battery's VCC, indicating with a red light that the battery is low.
+Battery provides around 4V on full charge. Step up module provides exactly 5V
+
+The second relais is switching to the NC position in order to close the circuit and connect the step up's GND to the battery. This is controlled via the GIPO PIN 10, SD3 on the ESP8266 module. On startup, the GIPO PIN is set to LOW and the relais stays on NC position, closing the device's circuit.

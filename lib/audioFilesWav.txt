@@ -26,7 +26,6 @@ PaintItBlack.wav
 PenguenJudoka.wav
 SurfinUSA.wav
 SympathyForTheDevil.wav
-System Volume Information/
 TurnToStone.wav
 WannabeLa.wav
 annekaffekanne.wav
