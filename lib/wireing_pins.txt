@@ -9,10 +9,10 @@ RST GIPO 4
 SS PIN/SDA GIPO 16
 
 SD Card Reader:
-CS GIPO 5
-SCK GIPO 14
-MOSI GIPO 13
-MISO GIPO 12
+CS GIPO 5 D1
+SCK GIPO 14 D5
+MOSI GIPO 13 D7
+MISO GIPO 12 D6
 
 I2C Audio amplifier:
 SD ???
@@ -28,6 +28,7 @@ Should be GIPO 10/SD3!
 Control Pins:
 Lower Volume GIPO 0 PIN D3
 Higher Volume - Change to A0 Input PIN! (prev. GIPO 10 PIN SD3)
+A0 with pullup-resistor 10kOhms
 
 Used GIPO PINS:
 00      D3

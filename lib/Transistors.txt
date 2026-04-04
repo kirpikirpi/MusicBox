@@ -1,0 +1,20 @@
+BC327 Bipolar Transistor PNP
+left to right:
+source-gate-drain
+GND-GND-VCC+Resistor
+GND on Gate activates the Transistor
+
+BD2400 S2 Mosfet PNP
+left tor right
+gate-drain-source
+GND-VCC+Resistor-GND
+Does not latch on GND signal on gate!
+
+IRFZ44N Mosfet NPN
+gate-drain-source
+VCC+1MOhm-VCC+Resistor-GND
+
+5V Relais
+opens on GND
+operates until 3.8V, then shuts down
+if it was active prior, relais shuts down at 2.9V
