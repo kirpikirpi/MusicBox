@@ -104,11 +104,15 @@ KeyValue songArray[] = {A,B,C,D,E,Horse,Bear,H,G,Mushroom,bHouse,zylinder,zylind
 int songArrayLen = 19;
 ///////////////END OF KEY VALUE PAIRS.////////////////////////////
 
+#define DEVICE_TYPE_OLD_BOX 0
+#define DEVICE_TYPE_NEW_BOX 1
+#define DEVICE_TYPE DEVICE_TYPE_NEW_BOX
+
 // Sound Setup with I2s and audio CS PIN
 AudioGeneratorWAV *wav;
 AudioFileSourceSD *file;
 AudioOutputI2S *out;
-int cs = 5;
+int cs = 5; //SD CARD!
 AudioFileSourceBuffer *buff;
 
 // RFID PINS
@@ -121,20 +125,31 @@ bool isFirstIteration = true;
 
 // VOLUME CONTROL
 #define LOW_VOLUME 0 //(GIPO 9 PIN SD2)-> GIPO 0 PIN D3
-#define HIGH_VOLUME 10 //GIPO 10 PIN SD3
+//#define HIGH_VOLUME 10 //GIPO 10 PIN SD3
 float gain = 0.07f; //0.24f should be max
 float step = 0.02f;
 int low_b_prev_state = 1; //input of low button in the last iteration
 int high_b_prev_state = 1; //input of high button in the last iteration
 
+#if DEVICE_TYPE == DEVICE_TYPE_OLD_BOX
+#define HIGH_VOLUME 10 //GIPO 10 PIN SD3
+#elif DEVICE_TYPE == DEVICE_TYPE_NEW_BOX
+#define HIGH_VOLUME A0 //Pullup-Circuit on A0
+#endif
+
+//NEW BOX VERSION ONLY - SHUTOFF PIN
+#define SHUTOFF_PIN 10 //GIPO 10 PIN SD3
+
+
 void setup()
 {
-	pinMode(HIGH_VOLUME, INPUT_PULLUP);
+	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX) pinMode(HIGH_VOLUME, INPUT_PULLUP);
 	pinMode(LOW_VOLUME, INPUT_PULLUP);
 	
 	Serial.begin(115200);			   
 	SPI.begin();			
 	   
+	
 	mfrc522.PCD_Init();				   
 	delay(4);
 	mfrc522.PCD_DumpVersionToSerial(); 
@@ -205,8 +220,16 @@ void scanAndPlay(){
 
 float adjustGain(float currGain, bool debug){
 	float g = currGain;
+	int higher_volume;
+	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX){
+		higher_volume = digitalRead(HIGH_VOLUME);
+	}
+	else if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX){
+		higher_volume = analogRead(HIGH_VOLUME);
+		if(higher_volume<=2024) higher_volume = 0;
+		else higher_volume = 1;
+	}
 	int lower_volume = digitalRead(LOW_VOLUME);
-	int higher_volume = digitalRead(HIGH_VOLUME);
 	if(lower_volume<=0 && low_b_prev_state>0) g -= step;
 	else if(higher_volume<=0 && high_b_prev_state>0) g += step;
 	g = constrain(g, 0,0.24f);
@@ -224,7 +247,7 @@ float adjustGain(float currGain, bool debug){
 
 void loop()
 {
-	gain = adjustGain(gain, false);
+	gain = adjustGain(gain, true);
 	out->SetGain(gain);
 	if (wav->isRunning())
 	{
