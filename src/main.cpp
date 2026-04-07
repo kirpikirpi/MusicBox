@@ -124,17 +124,18 @@ float timeToNextScan = 1000;   // time in milliseconds
 bool isFirstIteration = true;
 
 // VOLUME CONTROL
-#define LOW_VOLUME 0 //(GIPO 9 PIN SD2)-> GIPO 0 PIN D3
-//#define HIGH_VOLUME 10 //GIPO 10 PIN SD3
 float gain = 0.07f; //0.24f should be max
 float step = 0.02f;
 int low_b_prev_state = 1; //input of low button in the last iteration
 int high_b_prev_state = 1; //input of high button in the last iteration
 
+//...reverse
 #if DEVICE_TYPE == DEVICE_TYPE_OLD_BOX
 #define HIGH_VOLUME 10 //GIPO 10 PIN SD3
+#define LOW_VOLUME 0 //(GIPO 9 PIN SD2)-> GIPO 0 PIN D3
 #elif DEVICE_TYPE == DEVICE_TYPE_NEW_BOX
-#define HIGH_VOLUME A0 //Pullup-Circuit on A0
+#define LOW_VOLUME A0 //Pullup-Circuit on A0
+#define HIGH_VOLUME 0 //(GIPO 9 PIN SD2)-> GIPO 0 PIN D3
 #endif
 
 //NEW BOX VERSION ONLY - SHUTOFF PIN
@@ -145,24 +146,26 @@ int high_b_prev_state = 1; //input of high button in the last iteration
 
 void setup()
 {
+	Serial.begin(115200);			   
+	SPI.begin();	
+
+	//Setup BOX Type
 	Serial.print("Setting up device. Type: ");
 	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX){
 		Serial.print("OLD_BOX");
 		pinMode(HIGH_VOLUME, INPUT_PULLUP);
+		pinMode(LOW_VOLUME, INPUT_PULLUP);
 	}
-	else if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX) Serial.print("NEW_BOX"); 
-
-
-	pinMode(LOW_VOLUME, INPUT_PULLUP);
-	
-	Serial.begin(115200);			   
-	SPI.begin();			
-	   
-	/*
+	else if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX){
+		pinMode(HIGH_VOLUME, INPUT_PULLUP);
+		Serial.println("NEW_BOX"); 
+	}	   
+	//Sensor INIT
 	mfrc522.PCD_Init();				   
 	delay(4);
 	mfrc522.PCD_DumpVersionToSerial(); 
-	*/
+	
+	//SD Card INIT
 	Serial.print("Initializing SD card...");
 	if (!SD.begin(cs))
 	{
@@ -170,7 +173,9 @@ void setup()
 		return;
 	}
 	Serial.println("initialization done.");
-
+	
+	
+	//Audio SETUP
 	audioLogger = &Serial;
 	out = new AudioOutputI2S();
 	wav = new AudioGeneratorWAV();
@@ -227,27 +232,28 @@ void scanAndPlay(){
 	if(returnFileName == NULL) wav->stop();
 }
 
+//Convert Signal from A0 Pin
 int analogueToDigitalConversion(){
-	int higher_volume;
-	if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX){
-		higher_volume = analogRead(HIGH_VOLUME);
-		if(higher_volume<1024)higher_volume = 0;
-		else higher_volume = 1;
-	}
-	return higher_volume;
+	int output;
+	output = analogRead(A0);
+	if(output<1024)output = 0;
+	else output = 1;
+	return output;
 }
 
 float adjustGain(float currGain, bool debug){
 	float g = currGain;
 	int higher_volume;
+	int lower_volume;
 	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX){
 		higher_volume = digitalRead(HIGH_VOLUME);
+		lower_volume = digitalRead(LOW_VOLUME);
 	}
 	//DANGER! Pullup pin setup returns 0 as pos. button press!!
 	else if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX){
-		higher_volume = analogueToDigitalConversion();
+		higher_volume = digitalRead(HIGH_VOLUME);
+		lower_volume = analogueToDigitalConversion();
 	}
-	int lower_volume = digitalRead(LOW_VOLUME);
 	if(lower_volume<=0 && low_b_prev_state>0) g -= step;
 	else if(higher_volume<=0 && high_b_prev_state>0) g += step;
 	g = constrain(g, 0,0.24f);
