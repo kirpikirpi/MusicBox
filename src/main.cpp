@@ -138,22 +138,31 @@ int high_b_prev_state = 1; //input of high button in the last iteration
 #endif
 
 //NEW BOX VERSION ONLY - SHUTOFF PIN
+#if DEVICE_TYPE == DEVICE_TYPE_NEW_BOX
 #define SHUTOFF_PIN 10 //GIPO 10 PIN SD3
+#endif
 
 
 void setup()
 {
-	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX) pinMode(HIGH_VOLUME, INPUT_PULLUP);
+	Serial.print("Setting up device. Type: ");
+	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX){
+		Serial.print("OLD_BOX");
+		pinMode(HIGH_VOLUME, INPUT_PULLUP);
+	}
+	else if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX) Serial.print("NEW_BOX"); 
+
+
 	pinMode(LOW_VOLUME, INPUT_PULLUP);
 	
 	Serial.begin(115200);			   
 	SPI.begin();			
 	   
-	
+	/*
 	mfrc522.PCD_Init();				   
 	delay(4);
 	mfrc522.PCD_DumpVersionToSerial(); 
-	
+	*/
 	Serial.print("Initializing SD card...");
 	if (!SD.begin(cs))
 	{
@@ -218,23 +227,36 @@ void scanAndPlay(){
 	if(returnFileName == NULL) wav->stop();
 }
 
+int analogueToDigitalConversion(){
+	int higher_volume;
+	if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX){
+		higher_volume = analogRead(HIGH_VOLUME);
+		if(higher_volume<1024)higher_volume = 0;
+		else higher_volume = 1;
+	}
+	return higher_volume;
+}
+
 float adjustGain(float currGain, bool debug){
 	float g = currGain;
 	int higher_volume;
 	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX){
 		higher_volume = digitalRead(HIGH_VOLUME);
 	}
+	//DANGER! Pullup pin setup returns 0 as pos. button press!!
 	else if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX){
-		higher_volume = analogRead(HIGH_VOLUME);
-		if(higher_volume<=2024) higher_volume = 0;
-		else higher_volume = 1;
+		higher_volume = analogueToDigitalConversion();
 	}
 	int lower_volume = digitalRead(LOW_VOLUME);
 	if(lower_volume<=0 && low_b_prev_state>0) g -= step;
 	else if(higher_volume<=0 && high_b_prev_state>0) g += step;
 	g = constrain(g, 0,0.24f);
 	if(debug){
-		Serial.print("Gain: ");
+		Serial.print("Higher Button:");
+		Serial.print(higher_volume);
+		Serial.print(" Lower Button:");
+		Serial.print(lower_volume);
+		Serial.print(" Gain: ");
 		Serial.println(g);
 		delay(10);
 		return 0.0f;
@@ -247,7 +269,7 @@ float adjustGain(float currGain, bool debug){
 
 void loop()
 {
-	gain = adjustGain(gain, true);
+	gain = adjustGain(gain, false);
 	out->SetGain(gain);
 	if (wav->isRunning())
 	{

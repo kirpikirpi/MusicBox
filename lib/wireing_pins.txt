@@ -13,6 +13,7 @@ CS GIPO 5 D1
 SCK GIPO 14 D5
 MOSI GIPO 13 D7
 MISO GIPO 12 D6
+DISCLAIMER: AZ Delivery Micro SD Card reader needs 5V VCC!
 
 I2C Audio amplifier:
 SD ???
