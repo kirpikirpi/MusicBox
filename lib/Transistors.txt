@@ -5,7 +5,7 @@ GND-GND-VCC+Resistor
 GND on Gate activates the Transistor
 
 BD2400 S2 Mosfet PNP
-left tor right
+left to right
 gate-drain-source
 GND-VCC+Resistor-GND
 Does not latch on GND signal on gate!
