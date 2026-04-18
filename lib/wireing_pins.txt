@@ -5,8 +5,8 @@ SCK GIPO 14 PIN D5
 MOSI GIPO 13 PIN D7
 MISO GPIO 12 PIN D6
 IRQ
-RST GIPO 4
-SS PIN/SDA GIPO 16
+RST GIPO 4 D2
+SS PIN/SDA GIPO 16 D0
 
 SD Card Reader:
 CS GIPO 5 D1
@@ -14,6 +14,7 @@ SCK GIPO 14 D5
 MOSI GIPO 13 D7
 MISO GIPO 12 D6
 DISCLAIMER: AZ Delivery Micro SD Card reader needs 5V VCC!
+Logic output 3,3V
 
 I2C Audio amplifier:
 SD ???
@@ -24,7 +25,6 @@ LRC GIPO 2 PIN D4
 
 Shutoff-command pin:
 Should be GIPO 10/SD3!
-
 
 Control Pins:
 Lower Volume GIPO 0 PIN D3

@@ -158,12 +158,16 @@ void setup()
 	}
 	else if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX){
 		pinMode(HIGH_VOLUME, INPUT_PULLUP);
+		pinMode(SHUTOFF_PIN, OUTPUT);
+		digitalWrite(SHUTOFF_PIN,HIGH);
 		Serial.println("NEW_BOX"); 
+
 	}	   
 	//Sensor INIT
 	mfrc522.PCD_Init();				   
 	delay(4);
 	mfrc522.PCD_DumpVersionToSerial(); 
+	
 	
 	//SD Card INIT
 	Serial.print("Initializing SD card...");
@@ -173,6 +177,7 @@ void setup()
 		return;
 	}
 	Serial.println("initialization done.");
+
 	
 	
 	//Audio SETUP
