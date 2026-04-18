@@ -142,13 +142,18 @@ int high_b_prev_state = 1; //input of high button in the last iteration
 #if DEVICE_TYPE == DEVICE_TYPE_NEW_BOX
 #define SHUTOFF_PIN 10 //GIPO 10 PIN SD3
 #endif
+unsigned long lastTimestamp = 0;
+unsigned long minutes = 15; //mins until automatic shutdown
+unsigned long timeUntilSleep = 1000*60*minutes;
+unsigned long buttonPressSec = 2; //seconds to press minus button till shutdown
+unsigned long lastPress = 0;
+bool shutdown = false;
 
 
 void setup()
 {
 	Serial.begin(115200);			   
 	SPI.begin();	
-
 	//Setup BOX Type
 	Serial.print("Setting up device. Type: ");
 	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX){
@@ -168,7 +173,6 @@ void setup()
 	delay(4);
 	mfrc522.PCD_DumpVersionToSerial(); 
 	
-	
 	//SD Card INIT
 	Serial.print("Initializing SD card...");
 	if (!SD.begin(cs))
@@ -178,8 +182,6 @@ void setup()
 	}
 	Serial.println("initialization done.");
 
-	
-	
 	//Audio SETUP
 	audioLogger = &Serial;
 	out = new AudioOutputI2S();
@@ -246,42 +248,53 @@ int analogueToDigitalConversion(){
 	return output;
 }
 
-float adjustGain(float currGain, bool debug){
-	float g = currGain;
+//returns -1 for no button, 0 for minus, 1 for plus
+int ButtonInput(){
+	int input = -1;
 	int higher_volume;
 	int lower_volume;
-	if(DEVICE_TYPE == DEVICE_TYPE_OLD_BOX){
-		higher_volume = digitalRead(HIGH_VOLUME);
-		lower_volume = digitalRead(LOW_VOLUME);
-	}
 	//DANGER! Pullup pin setup returns 0 as pos. button press!!
-	else if(DEVICE_TYPE == DEVICE_TYPE_NEW_BOX){
-		higher_volume = digitalRead(HIGH_VOLUME);
-		lower_volume = analogueToDigitalConversion();
-	}
-	if(lower_volume<=0 && low_b_prev_state>0) g -= step;
-	else if(higher_volume<=0 && high_b_prev_state>0) g += step;
-	g = constrain(g, 0,0.24f);
-	if(debug){
-		Serial.print("Higher Button:");
-		Serial.print(higher_volume);
-		Serial.print(" Lower Button:");
-		Serial.print(lower_volume);
-		Serial.print(" Gain: ");
-		Serial.println(g);
-		delay(10);
-		return 0.0f;
-	}
+	higher_volume = digitalRead(HIGH_VOLUME);
+	lower_volume = analogueToDigitalConversion();
+	if(lower_volume<=0 && low_b_prev_state>0) input=0;
+	else if(higher_volume<=0 && high_b_prev_state>0) input=1;
 	low_b_prev_state = lower_volume;
 	high_b_prev_state = higher_volume;
+	return input;
+}
+
+float adjustGain(int gainButton, float currGain){
+	float g = currGain;
+	if(gainButton==0) g -= step;
+	else if(gainButton==1) g += step;
+	g = constrain(g, 0,0.24f);
 	return g;
+}
+
+//Trigger shutdown, activation with external MOSFET
+void initiateShutdown(){
+	Serial.println("Shutting down...");
+	digitalWrite(SHUTOFF_PIN,LOW);
+}
+
+//scans minus button on A0, returns true if pressed for x sec.
+bool ScanShutdownButton(unsigned long seconds){
+	int minButtonState = analogueToDigitalConversion();
+	//reset counter if minus button is not pressed - watch out for pullup resistor signal!
+	if(minButtonState>0){
+		lastPress = millis();
+		return false;
+	}
+	else if(millis()>(lastPress+(seconds*1000))) return true;
+	return false;
 }
 
 
 void loop()
 {
-	gain = adjustGain(gain, false);
+	gain = adjustGain(ButtonInput(), gain);
 	out->SetGain(gain);
+	shutdown = ScanShutdownButton(buttonPressSec);
 	if (wav->isRunning())
 	{
 		if (!wav->loop()) wav->stop();
@@ -291,9 +304,11 @@ void loop()
 			scanAndPlay();
 			plannedNextScan = millisSinceStart + timeToNextScan;
 		}
-		
+		lastTimestamp = millis();
+		if(shutdown) initiateShutdown();
 		return;
 	}
+	else if(millis()>(lastTimestamp+timeUntilSleep)||shutdown) initiateShutdown();
 	else if (!wav->isRunning() && !isFirstIteration)
 	{
 		Serial.printf("done\n");
